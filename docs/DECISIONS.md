@@ -223,9 +223,12 @@
   3. Aplicar el fix como migración nueva vía `supabase migration new` + `supabase db push` (DEC-016), **no** pegar SQL en el Dashboard otra vez.
   4. Reconciliar el repo con el estado real de la DB: si `fix_security_definer_grants` existe en producción pero no en el repo, hay que traerla (`supabase db pull` o reconstruir el SQL manualmente) para que el historial de migraciones vuelva a ser la fuente de verdad.
 - **Por qué no lo resuelve Fran:** es RLS/grants sobre la base de datos — dominio exclusivo del Backend Agent. Tocarlo sin conocer el estado real de las policies arriesga romper algo más, o volver a violar DEC-016.
-- **Estado:** 🔴 Bloqueante — impide continuar el QA de los Flujos 4 (Carta pública) y 5 (Canje de recompensas), y probablemente afecta partes de Admin que consultan estas tablas. Pausado hasta que Kevin lo resuelva.
-- **Tomada por:** Fran (Frontend Agent) — diagnóstico; corrección pendiente de Kevin (Backend Agent)
-- **Fecha:** 17 de julio de 2026
+- **Estado:** 🟢 Resuelto a nivel de datos (verificado 26 de julio de 2026) — pero con una advertencia de proceso.
+  - **Verificación en vivo (Fran, mismo método que el hallazgo original):** consulta directa a `/rest/v1/categories`, `/rest/v1/products` y `/rest/v1/rewards` con la `anon key`, sin pasar por el frontend. Las 3 tablas devuelven datos correctamente — ya no aparece `permission denied for function current_user_role`.
+  - **⚠️ El fix no está en ningún archivo de `supabase/migrations/`** — se buscó `current_user_role` y `fix_security_definer_grants` en el repo y no aparece ninguna migración nueva desde `20260715034755_agregar_dni_phone_city_profiles.sql`. Esto significa que el `GRANT EXECUTE` (u otro cambio equivalente) se aplicó **de nuevo directamente en el Dashboard de Supabase**, repitiendo el mismo patrón que causó este bug originalmente y volviendo a violar el flujo obligatorio de DEC-016. El repo vuelve a divergir del estado real de la DB — sigue pendiente el paso 4 del plan original (`supabase db pull` o reconstruir la migración a mano) para que el historial de migraciones sea otra vez la fuente de verdad.
+  - **Impacto:** desbloquea `/carta` para anónimos y la lista de recompensas en `/perfil` — el QA puede retomar los Flujos 4 y 5.
+- **Tomada por:** Fran (Frontend Agent) — diagnóstico inicial y verificación de resolución; corrección aplicada por Kevin (Backend Agent) fuera del flujo de migraciones — pendiente que Kevin la documente y regularice con una migración real.
+- **Fecha:** 17 de julio de 2026 (hallazgo) — 26 de julio de 2026 (verificado resuelto)
 
 ---
 

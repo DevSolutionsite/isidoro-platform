@@ -1,10 +1,10 @@
 # PROJECT_STATUS.md — Plataforma Isidoro
 > Actualizar al iniciar y cerrar cada jornada. El CTO Agent lee este archivo antes de responder cualquier pregunta.
 
-**Última actualización:** 17 de julio de 2026 — Fran (fixes en vivo durante QA: color-scheme: dark (DEC-024) + listas de admin sin filtrar deleted_at (DEC-025))
+**Última actualización:** 26 de julio de 2026 — Fran (verificado en vivo: DEC-023 resuelto a nivel de datos, QA puede retomar Flujos 4-5; corregidas referencias stale a mock en perfil del cliente)
 **Estado general:** EN CURSO — Semana 4 (backend completo, frontend avanzado)
 **Semana actual:** 4 de 4
-**Riesgo de plazo:** ⚠️ Medio — bloqueante crítico de backend pausó el QA (ver Bloqueos activos)
+**Riesgo de plazo:** ⚠️ Medio — DEC-023 resuelto pero fuera del flujo de migraciones (repo y DB divergen otra vez, ver Bloqueos activos); QA puede retomar
 
 ---
 
@@ -55,7 +55,7 @@
 | Recompensas con stock opcional | Kevin | ✅ Completado | PostgREST + stock decrementado en confirm_redemption |
 | Generación de código de canje (6 dígitos) | Kevin | ✅ Completado | Edge Fn initiate-redemption — crypto.getRandomValues |
 | Confirmación de canje por cajero | Kevin | ✅ Completado | Edge Fn confirm-redemption — SQL atómica con FOR UPDATE |
-| Perfil del cliente (historial, saldo de puntos) | Fran | ✅ Completado | Mock data. Reemplazar cuando Kevin integre endpoints reales. |
+| Perfil del cliente (historial, saldo de puntos) | Fran | ✅ Completado | Integrado con `points_balance`/`points_transactions` reales desde el 30 jun (commit `f9b0a5d`). |
 | QR personal del cliente | Fran | ✅ Completado | SVG generado server-side con lib `qrcode` desde `profiles.qr_token` |
 | Vista cajero: registrar consumo | Fran | ✅ Completado | `/caja`: búsqueda por QR/nombre, card cliente con saldo, form con preview de puntos en tiempo real. |
 | Vista cajero: confirmar canje con código | Fran | ✅ Completado | /caja/canje — OTP 6 dígitos, confirm-redemption Edge Fn, success/error states, tab nav. **Probado end-to-end con datos reales (1 jul 2026)** |
@@ -70,18 +70,17 @@
 | UI división de cuenta | Fran | ✅ Completado | `/caja/division` (tercer tab en CajaTabs). Búsqueda de clientes client-side vía Server Action (sin reload), monto individual por cliente con preview de puntos, chequeo cruzado opcional de total de mesa, resultado inline por cliente. Integrado con Edge Fn `split-consumption` real (no mock). |
 | Dashboard de estadísticas | Fran | ✅ Completado | Integrado con Edge Fn `reports` real (no mock): KPIs, gráfico de consumos por día, top clientes, top recompensas. |
 | Panel admin: búsqueda y gestión de clientes | Fran | ✅ Completado | Buscador por nombre/email (debounce URL), tabla con puntos, detalle con historial de consumos + form ajuste manual de puntos. |
-| QA completo de todos los flujos | Kevin + Fran | 🔴 Bloqueado | Ejecución en curso vía `docs/QA_CHECKLIST.md` (14 flujos). Flujos 1-3 (registro, login, completar perfil) ✅ verificados OK. **Flujo 4 (Carta pública) reveló un bloqueante crítico de backend — ver DEC-023** — QA pausado hasta que Kevin lo resuelva, porque probablemente afecta también el Flujo 5 (canje, depende de `rewards`) y partes de Admin. |
+| QA completo de todos los flujos | Kevin + Fran | 🔄 En progreso | Ejecución vía `docs/QA_CHECKLIST.md` (14 flujos). Flujos 1-3 (registro, login, completar perfil) ✅ verificados OK. DEC-023 (bloqueaba Flujos 4 y 5) verificado resuelto el 26 jul — QA retoma desde el Flujo 4. |
 | Deploy a producción | Kevin + Fran | ⬜ Pendiente | — |
 
 ---
 
-## Bloqueos activos
-- 🔴 **BLOQUEANTE CRÍTICO — Kevin, urgente:** `categories`, `products` y `rewards` devuelven `permission denied for function current_user_role` para el rol `anon` — confirmado consultando la API REST de Supabase directamente con la `anon key`, sin pasar por el frontend. Esto rompe **`/carta` (la carta pública) para todos los visitantes sin sesión** — no muestra ni un producto ni una categoría — y también la lista de recompensas en `/perfil`. `settings`, `promotions` y `time_offers` funcionan bien. Causa técnica, pista sobre el origen, y pasos a seguir documentados en **DEC-023** (`DECISIONS.md`). Pausa el QA en los Flujos 4 y 5 de `docs/QA_CHECKLIST.md` hasta que se resuelva. No lo puede resolver Fran — es RLS/grants, dominio de Kevin.
+- ⚠️ **Kevin, no bloqueante pero requiere acción:** DEC-023 (`categories`/`products`/`rewards` rotas para `anon`) está resuelto a nivel de datos — verificado el 26 jul consultando la API REST directamente, ya no devuelve `permission denied`. Pero el fix **no está en ninguna migración del repo** (se aplicó otra vez directo en el Dashboard de Supabase, violando DEC-016). Falta que Kevin regularice esto con `supabase db pull` o una migración nueva que documente el `GRANT EXECUTE`, para que el repo vuelva a reflejar el estado real de la DB. Ver DEC-023 actualizado en `DECISIONS.md`.
 - ⚠️ **Kevin (no bloqueante):** el trigger `handle_new_user` solo lee `full_name` de `raw_user_meta_data`. `RegisterForm.tsx` ya manda `dni`, `phone` y `city` en el signup, pero esos datos se pierden porque el trigger no los captura — el usuario los reingresa una vez en `/completar-perfil`. Actualizar `supabase/migrations/20260615000001_handle_new_user.sql` (o migración nueva) para leer e insertar también esos 3 campos en `profiles` y evitar el paso duplicado. Ver DEC-019/DEC-020.
 
 ## Integración pendiente (Fran reemplaza mocks por datos reales)
 - ~~Carta pública → endpoints productos, categorías, time_offers, promotions~~ ✅ integrada
-- Perfil cliente → `/rest/v1/points_balance` y `/rest/v1/points_transactions`
+- ~~Perfil cliente → `/rest/v1/points_balance` y `/rest/v1/points_transactions`~~ ✅ integrada (desde 30 jun, commit `f9b0a5d`)
 - Vista cajero → Edge Fn `register-consumption` (confirm-redemption ✅ probado)
 - ~~Dashboard → Edge Fn `reports`~~ ✅ integrado
 - ~~División de cuenta → Edge Fn `split-consumption`~~ ✅ integrada
