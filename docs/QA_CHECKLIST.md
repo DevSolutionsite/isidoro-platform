@@ -60,9 +60,9 @@
 4. [ ] **Inconcluso — no es reproducible de forma confiable vía automatización.** Al tocar una categoría, en las pruebas automatizadas el drawer se cierra pero no se ve scroll. Investigado a fondo: `scrollIntoView({behavior:'smooth'})` llamado de forma síncrona funciona perfecto; la misma llamada diferida (vía `setTimeout` — el mecanismo real del código — o incluso vía `requestAnimationFrame` doble, sin pasar por React ni por el drawer) nunca anima nada en la pestaña controlada por la extensión de automatización. Como falla igual sin código de la app de por medio, no parece un bug de `CategoryMenu.tsx` sino una limitación del entorno de prueba. **Pendiente: confirmar con un click real de mouse en un Chrome normal.**
 5. [x] Solo aparecen categorías con productos disponibles — confirmado por lectura de código (`carta/page.tsx:164`, `if (categoryProducts.length === 0) return null`) y consistente con lo visto en vivo (5 categorías con productos, todas mostradas).
 6. [x] Producto con `is_available=false` no aparece en `/carta` — verificado en vivo: se desmarcó "Disponible en carta" en Provoleta desde el admin, dejó de aparecer en `/carta`, se revirtió el cambio después de confirmar.
-7. [ ] Sin promoción activa cargada en este momento — no hay datos para probar. Pendiente re-verificar cuando se cargue una promoción de prueba (Flujo 11).
-8. [ ] Sin oferta por horario activa en este momento — no hay datos para probar. Pendiente re-verificar cuando se cargue una oferta de prueba (Flujo 12).
-9. [ ] Depende de 8 — pendiente re-verificar junto con Flujo 12.
+7. [x] Verificado en el Flujo 11: "QA Promo Activa" apareció en el carrusel con badge "PROMO", sin precio — OK.
+8. [x] Verificado en el Flujo 12: oferta activa (cruzando medianoche) apareció con badge "AHORA" y precio con descuento del primer producto asociado — OK.
+9. [x] Verificado en el Flujo 12: "Bife de chorizo" mostró $7.500 tachando $9.800, badge "PROMO", y "+7500 pts" — puntos calculados sobre el precio con descuento, no el original. OK.
 10. [x] Verificado por código: `isTimeOfferActive` en `carta/page.tsx` evalúa la unión de ambos tramos cuando `start_time > end_time` (línea 40-44) — lógica correcta para cruce de medianoche, consistente con el fix de DEC del 16 jul.
 11. [x] Confirmado: no hay input de búsqueda ni filtro, solo navegación por el drawer — comportamiento esperado, no es bug.
 
@@ -150,24 +150,26 @@
 4. [x] Renombrada a "QA Categoria Editada" → "Actualizado correctamente.", el nombre se actualizó en la lista de admin. No se verificó en `/carta` porque el producto de prueba asociado era `is_available=false` (no aparece ahí de todas formas).
 5. [x] Eliminada la categoría con 1 producto asociado → sin bloqueo, sin advertencia, desapareció de la lista de admin. **Hallazgo relacionado, más amplio que el gap ya documentado:** en `/admin/productos`, el producto huérfano siguió mostrando el nombre de la categoría eliminada ("QA Categoria Editada") en vez de "Sin categoría" o similar — el join a `categories(name)` en la lista de productos no filtra `deleted_at` de la categoría. El gap documentado en el checklist original solo hablaba de `/carta`; esto confirma que también pasa en el propio admin. No se corrigió (no es bloqueante, es cosmético — el producto de prueba no era visible públicamente), pero vale que Kevin/Fran lo tengan en cuenta si se decide resolver el gap de categoría-fantasma en general.
 
-### 11. Promociones (`/admin/promociones`)
+### 11. Promociones (`/admin/promociones`) — ✅ Verificado 26 jul 2026
 
-1. [ ] Crear una promoción con `valid_from` en el pasado y `valid_until` en el futuro, `is_active` tildado → **esperado:** aparece con estado "Activa" en la lista.
-2. [ ] Crear una con `valid_from` en el futuro → **esperado:** estado "Próxima".
-3. [ ] Crear una con `valid_until` en el pasado → **esperado:** estado "Vencida".
-4. [ ] Crear una con `is_active` destildado → **esperado:** estado "Inactiva", sin importar las fechas.
-5. [ ] **Caso a verificar (gap conocido):** crear una promoción con `valid_until` **anterior** a `valid_from` — el form no lo valida. Confirmar qué estado muestra la lista (probablemente "Vencida" siempre) y que no rompe nada.
-6. [ ] Eliminar una promoción → **esperado:** a diferencia de productos/categorías, **no desaparece de la lista** — pasa a `is_active=false` y se ve como "Inactiva". No confundir con un bug: es el comportamiento actual (no hay columna `deleted_at` en `promotions`).
-7. [ ] Confirmar que solo las promociones "Activa" (según la lógica de fechas + `is_active`) aparecen en el carrusel de `/carta`.
+1. [x] "QA Promo Activa" (jun-dic 2026, activa) → estado "Activa" — OK.
+2. [x] "QA Promo Proxima" (`valid_from` en diciembre) → estado "Próxima" — OK.
+3. [x] Ya había 2 promociones preexistentes con `valid_until` pasado ("zsz", "2X1 En liso") → ambas "Vencida" — confirmado sin necesidad de crear una nueva.
+4. [x] "QA Promo Inactiva" (fechas válidas, checkbox destildado) → estado "Inactiva" — OK.
+5. [x] "QA Promo FechasInvertidas" (`valid_until` 31 dic, `valid_from` 1 jun — invertidas) → el form lo permitió sin validar. Estado mostrado: **"Próxima"**, no "Vencida" como especulaba el checklist original — tiene sentido: el código evalúa `valid_from <= now` primero, y como el `valid_from` (31 dic) todavía no llegó, cae en "Próxima" antes de mirar `valid_until`. No rompe nada, corregido el dato del checklist.
+6. [x] Eliminada "QA Promo FechasInvertidas" → no desapareció de la lista, pasó a "Inactiva" — OK, comportamiento esperado.
+7. [x] En `/carta` el carrusel mostró únicamente "QA Promo Activa" con badge "PROMO", sin precio — el resto (Próxima/Vencida/Inactiva) no aparecieron — OK.
 
-### 12. Ofertas por horario (`/admin/ofertas`)
+**Limpieza:** las 4 promociones de prueba se borraron directo por API (service role) al terminar, ya que la UI no tiene borrado real para promociones (por diseño).
 
-1. [ ] Crear una oferta con horario normal (ej. `18:00`–`20:00`), sin productos asociados → **esperado:** se guarda, lista muestra "Sin productos" y helper text en el form aclara que se mostraría "como banner general sin precio específico".
-2. [ ] Editar esa oferta y asociar 1-2 productos, alguno con `price_override` y otro sin (dejar vacío = "Sin descuento") → guardar.
-3. [ ] Volver a editar y quitar un producto asociado ("Quitar") → guardar → **esperado:** la asociación se eliminó (el update hace replace completo de las asociaciones, no merge).
-4. [ ] **Caso a verificar (gap conocido):** en el formulario de **crear**, el dropdown de productos para asociar solo lista productos `is_available=true`; en el formulario de **editar**, lista **todos** los productos sin filtrar disponibilidad. Confirmar esta inconsistencia intentando asociar un producto no-disponible: no debería poder hacerse al crear, pero sí al editar.
-5. [ ] **Caso a verificar (gap conocido, ligado al punto 10 de la sección Carta):** crear una oferta con horario que cruza medianoche (`start_time=22:00`, `end_time=02:00`) → el form lo permite sin avisar. Confirmar en `/carta` que nunca se activa (ver sección 4, punto 10).
-6. [ ] Eliminar una oferta → **esperado:** igual que promociones, pasa a `is_active=false`, no desaparece de la lista — queda como "Inactiva".
+### 12. Ofertas por horario (`/admin/ofertas`) — ✅ Verificado 26 jul 2026
+
+1. [x] "QA Oferta Normal" (18:00-20:00, sin productos) → creada, lista mostró "Sin productos" — OK.
+2. [x] Asociados "Bife de chorizo" (`price_override=7500`) y "Agua mineral" (sin override) — guardado OK.
+3. [x] Editado de nuevo, quitado "Agua mineral" → lista de admin mostró solo "Bife de chorizo" — confirma replace completo, no merge.
+4. [x] Confirmado el gap documentado, y además uno más amplio: el dropdown de **editar** no solo ignora `is_available`, tampoco filtra `deleted_at` — aparecían ahí "QA Producto Test" y "QA Producto Huerfano", ambos ya eliminados en pasos anteriores de esta sesión. Mismo mecanismo de fondo que el hallazgo del Flujo 10 (joins sin filtrar `deleted_at`), pero acá en el dropdown de productos, no en el nombre de categoría. No es bloqueante (elegir un producto eliminado ahí sería un error de uso del admin, no algo que vea un cliente), pero vale que quede registrado junto al resto de los gaps de `deleted_at`.
+5. [x] **Aprovechado en vivo, sin simular hora:** se editaron los horarios de "QA Oferta Normal" a `23:30`–`00:30` (cruza medianoche) justo antes de medianoche real — se activó correctamente en `/carta` con badge "AHORA", precio con descuento tachado y puntos calculados sobre el precio con descuento. Confirma a la vez el punto 10 de la sección Carta (ya verificado por código) y el punto 9 de la misma sección (antes pendiente por falta de datos).
+6. [x] Eliminada "QA Oferta Normal" → no desapareció, pasó a "Inactiva" — OK. Limpiada después directo por API (service role) para no dejar basura de prueba.
 
 ### 13. Clientes (`/admin/clientes`) + ajuste de puntos
 
