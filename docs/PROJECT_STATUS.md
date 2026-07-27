@@ -1,10 +1,10 @@
 # PROJECT_STATUS.md — Plataforma Isidoro
 > Actualizar al iniciar y cerrar cada jornada. El CTO Agent lee este archivo antes de responder cualquier pregunta.
 
-**Última actualización:** 26 de julio de 2026 — Fran (verificado en vivo: DEC-023 resuelto a nivel de datos, QA puede retomar Flujos 4-5; corregidas referencias stale a mock en perfil del cliente)
+**Última actualización:** 26 de julio de 2026 — Fran (QA completo de los 14 flujos vía `docs/QA_CHECKLIST.md`; 1 bug real encontrado y corregido — auto-submit de código de canje, ver DEC-026)
 **Estado general:** EN CURSO — Semana 4 (backend completo, frontend avanzado)
 **Semana actual:** 4 de 4
-**Riesgo de plazo:** ⚠️ Medio — DEC-023 resuelto pero fuera del flujo de migraciones (repo y DB divergen otra vez, ver Bloqueos activos); QA puede retomar
+**Riesgo de plazo:** ⚠️ Medio — DEC-023 resuelto pero fuera del flujo de migraciones (repo y DB divergen otra vez, ver Bloqueos activos); QA funcional completo, falta deploy
 
 ---
 
@@ -70,7 +70,7 @@
 | UI división de cuenta | Fran | ✅ Completado | `/caja/division` (tercer tab en CajaTabs). Búsqueda de clientes client-side vía Server Action (sin reload), monto individual por cliente con preview de puntos, chequeo cruzado opcional de total de mesa, resultado inline por cliente. Integrado con Edge Fn `split-consumption` real (no mock). |
 | Dashboard de estadísticas | Fran | ✅ Completado | Integrado con Edge Fn `reports` real (no mock): KPIs, gráfico de consumos por día, top clientes, top recompensas. |
 | Panel admin: búsqueda y gestión de clientes | Fran | ✅ Completado | Buscador por nombre/email (debounce URL), tabla con puntos, detalle con historial de consumos + form ajuste manual de puntos. |
-| QA completo de todos los flujos | Kevin + Fran | 🔄 En progreso | Ejecución vía `docs/QA_CHECKLIST.md` (14 flujos). Flujos 1-3 (registro, login, completar perfil) ✅ verificados OK. DEC-023 (bloqueaba Flujos 4 y 5) verificado resuelto el 26 jul — QA retoma desde el Flujo 4. |
+| QA completo de todos los flujos | Kevin + Fran | ✅ Completado | Los 14 flujos de `docs/QA_CHECKLIST.md` verificados el 26 jul. 1 bug real encontrado y corregido (auto-submit de canje en `/caja/canje`, ver DEC-026). Quedaron sin verificar ~8 ítems puntuales por requerir esperas reales de 15 min o datos de test específicos (cronómetro venciendo, stock 0, código vencido) — no bloqueantes, ver detalle al final de `QA_CHECKLIST.md`. Un ítem (scroll del drawer de categorías en `/carta`) necesita confirmación manual del usuario, automatización no concluyente. |
 | Deploy a producción | Kevin + Fran | ⬜ Pendiente | — |
 
 ---
@@ -81,9 +81,11 @@
 ## Integración pendiente (Fran reemplaza mocks por datos reales)
 - ~~Carta pública → endpoints productos, categorías, time_offers, promotions~~ ✅ integrada
 - ~~Perfil cliente → `/rest/v1/points_balance` y `/rest/v1/points_transactions`~~ ✅ integrada (desde 30 jun, commit `f9b0a5d`)
-- Vista cajero → Edge Fn `register-consumption` (confirm-redemption ✅ probado)
+- ~~Vista cajero → Edge Fn `register-consumption`~~ ✅ integrada — probada en vivo el 26 jul (Flujo 6 del QA), sin mocks.
 - ~~Dashboard → Edge Fn `reports`~~ ✅ integrado
 - ~~División de cuenta → Edge Fn `split-consumption`~~ ✅ integrada
+
+**No quedan mocks pendientes de reemplazo.** Todas las vistas de cliente, cajero y admin están conectadas a datos reales.
 
 ## Pendientes del cliente (Restaurante Isidoro)
 - [ ] Fotos de todos los productos del menú
