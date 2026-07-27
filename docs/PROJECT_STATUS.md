@@ -1,10 +1,10 @@
 # PROJECT_STATUS.md — Plataforma Isidoro
 > Actualizar al iniciar y cerrar cada jornada. El CTO Agent lee este archivo antes de responder cualquier pregunta.
 
-**Última actualización:** 24 de junio de 2026 — CTO Agent (unificación feature/backend + feature/frontend)
+**Última actualización:** 26 de julio de 2026 — Fran (verificado en vivo: DEC-023 resuelto a nivel de datos, QA puede retomar Flujos 4-5; corregidas referencias stale a mock en perfil del cliente)
 **Estado general:** EN CURSO — Semana 4 (backend completo, frontend avanzado)
 **Semana actual:** 4 de 4
-**Riesgo de plazo:** Bajo
+**Riesgo de plazo:** ⚠️ Medio — DEC-023 resuelto pero fuera del flujo de migraciones (repo y DB divergen otra vez, ver Bloqueos activos); QA puede retomar
 
 ---
 
@@ -29,7 +29,8 @@
 | Módulo | Responsable | Estado | Notas |
 |---|---|---|---|
 | Login email/password + Google OAuth | Fran | ✅ Completado | Redirect por rol. Ruta `/auth/callback` para OAuth. Validado con usuario real (Francisco Bonfanti) |
-| Registro email/password + Google OAuth | Fran | ✅ Completado | `full_name` en `options.data`. Maneja email confirm + auto-login. |
+| Registro email/password + Google OAuth | Fran | ✅ Completado | `full_name`, `dni`, `phone`, `city` en `options.data` (email/password). Maneja email confirm + auto-login. Ciudad con combobox+autocompletado (DEC-019). |
+| Gate `/completar-perfil` (dni/phone/city faltante) | Fran | ✅ Completado | `(cliente)/layout.tsx` redirige si falta algún dato; cubre login email/password, Google OAuth y navegación directa. `update()` sobre RLS existente (DEC-020). |
 
 ### Semana 2 — Carta digital + gestión de productos
 
@@ -39,7 +40,7 @@
 | API categorías (CRUD) | Kevin | ✅ Completado | PostgREST vía RLS — contratos en API_CONTRACTS.md |
 | API promociones con fechas | Kevin | ✅ Completado | PostgREST vía RLS — contratos en API_CONTRACTS.md |
 | API ofertas por horario | Kevin | ✅ Completado | PostgREST + activación en cliente (DEC-013) |
-| Carta pública con datos reales + categorías | Fran | ⬜ Pendiente | Depende de integración con endpoints reales de Kevin |
+| Carta pública con datos reales + categorías | Fran | ✅ Completado | Integrada con Supabase real: products, categories, promotions, time_offers, settings. Zero errores. Verificado 1 jul 2026. |
 | Panel admin: gestión de productos | Fran | ✅ Completado | CRUD completo con mock. Server Actions listas para reemplazar con Supabase. |
 | Panel admin: gestión de categorías | Fran | ✅ Completado | CRUD completo con mock. Muestra conteo de productos por categoría. |
 | Panel admin: promociones y ofertas por horario | Fran | ✅ Completado | CRUD completo con mock. PromoForm con datetime-local, TimeOfferForm con product associations + price_override. |
@@ -54,10 +55,10 @@
 | Recompensas con stock opcional | Kevin | ✅ Completado | PostgREST + stock decrementado en confirm_redemption |
 | Generación de código de canje (6 dígitos) | Kevin | ✅ Completado | Edge Fn initiate-redemption — crypto.getRandomValues |
 | Confirmación de canje por cajero | Kevin | ✅ Completado | Edge Fn confirm-redemption — SQL atómica con FOR UPDATE |
-| Perfil del cliente (historial, saldo de puntos) | Fran | ✅ Completado | Mock data. Reemplazar cuando Kevin integre endpoints reales. |
+| Perfil del cliente (historial, saldo de puntos) | Fran | ✅ Completado | Integrado con `points_balance`/`points_transactions` reales desde el 30 jun (commit `f9b0a5d`). |
 | QR personal del cliente | Fran | ✅ Completado | SVG generado server-side con lib `qrcode` desde `profiles.qr_token` |
 | Vista cajero: registrar consumo | Fran | ✅ Completado | `/caja`: búsqueda por QR/nombre, card cliente con saldo, form con preview de puntos en tiempo real. |
-| Vista cajero: confirmar canje con código | Fran | ⬜ Pendiente | Mock pendiente |
+| Vista cajero: confirmar canje con código | Fran | ✅ Completado | /caja/canje — OTP 6 dígitos, confirm-redemption Edge Fn, success/error states, tab nav. **Probado end-to-end con datos reales (1 jul 2026)** |
 
 ### Semana 4 — División de cuenta + estadísticas + QA
 
@@ -66,23 +67,23 @@
 | División de cuenta (lógica proporcional) | Kevin | ✅ Completado | Edge Fn split-consumption — SQL atómica, session_id server-side |
 | Ajuste manual de puntos (admin) | Kevin | ✅ Completado | Edge Fn adjust-points + SQL fn adjust_points — atómico, solo admin |
 | Endpoints de reportes y estadísticas | Kevin | ✅ Completado | Edge Fn reports — 4 SQL fns en paralelo, solo admin |
-| UI división de cuenta | Fran | ⬜ Pendiente | — |
-| Dashboard de estadísticas | Fran | ⬜ Pendiente | — |
+| UI división de cuenta | Fran | ✅ Completado | `/caja/division` (tercer tab en CajaTabs). Búsqueda de clientes client-side vía Server Action (sin reload), monto individual por cliente con preview de puntos, chequeo cruzado opcional de total de mesa, resultado inline por cliente. Integrado con Edge Fn `split-consumption` real (no mock). |
+| Dashboard de estadísticas | Fran | ✅ Completado | Integrado con Edge Fn `reports` real (no mock): KPIs, gráfico de consumos por día, top clientes, top recompensas. |
 | Panel admin: búsqueda y gestión de clientes | Fran | ✅ Completado | Buscador por nombre/email (debounce URL), tabla con puntos, detalle con historial de consumos + form ajuste manual de puntos. |
-| QA completo de todos los flujos | Kevin + Fran | ⬜ Pendiente | — |
+| QA completo de todos los flujos | Kevin + Fran | 🔄 En progreso | Ejecución vía `docs/QA_CHECKLIST.md` (14 flujos). Flujos 1-3 (registro, login, completar perfil) ✅ verificados OK. DEC-023 (bloqueaba Flujos 4 y 5) verificado resuelto el 26 jul — QA retoma desde el Flujo 4. |
 | Deploy a producción | Kevin + Fran | ⬜ Pendiente | — |
 
 ---
 
-## Bloqueos activos
-_Ninguno crítico. El backend de Kevin está 100% completo. Fran puede integrar datos reales en cualquier momento._
+- ⚠️ **Kevin, no bloqueante pero requiere acción:** DEC-023 (`categories`/`products`/`rewards` rotas para `anon`) está resuelto a nivel de datos — verificado el 26 jul consultando la API REST directamente, ya no devuelve `permission denied`. Pero el fix **no está en ninguna migración del repo** (se aplicó otra vez directo en el Dashboard de Supabase, violando DEC-016). Falta que Kevin regularice esto con `supabase db pull` o una migración nueva que documente el `GRANT EXECUTE`, para que el repo vuelva a reflejar el estado real de la DB. Ver DEC-023 actualizado en `DECISIONS.md`.
+- ⚠️ **Kevin (no bloqueante):** el trigger `handle_new_user` solo lee `full_name` de `raw_user_meta_data`. `RegisterForm.tsx` ya manda `dni`, `phone` y `city` en el signup, pero esos datos se pierden porque el trigger no los captura — el usuario los reingresa una vez en `/completar-perfil`. Actualizar `supabase/migrations/20260615000001_handle_new_user.sql` (o migración nueva) para leer e insertar también esos 3 campos en `profiles` y evitar el paso duplicado. Ver DEC-019/DEC-020.
 
 ## Integración pendiente (Fran reemplaza mocks por datos reales)
-- Carta pública → endpoints productos, categorías, time_offers, promotions
-- Perfil cliente → `/rest/v1/points_balance` y `/rest/v1/points_transactions`
-- Vista cajero → Edge Fn `register-consumption` y `confirm-redemption`
-- Dashboard → Edge Fn `reports`
-- División de cuenta → Edge Fn `split-consumption`
+- ~~Carta pública → endpoints productos, categorías, time_offers, promotions~~ ✅ integrada
+- ~~Perfil cliente → `/rest/v1/points_balance` y `/rest/v1/points_transactions`~~ ✅ integrada (desde 30 jun, commit `f9b0a5d`)
+- Vista cajero → Edge Fn `register-consumption` (confirm-redemption ✅ probado)
+- ~~Dashboard → Edge Fn `reports`~~ ✅ integrado
+- ~~División de cuenta → Edge Fn `split-consumption`~~ ✅ integrada
 
 ## Pendientes del cliente (Restaurante Isidoro)
 - [ ] Fotos de todos los productos del menú

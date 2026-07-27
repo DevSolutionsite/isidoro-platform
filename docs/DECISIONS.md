@@ -153,6 +153,45 @@
 
 ---
 
+### DEC-019 — dni/phone/city obligatorios en el registro (email/password)
+- **Decisión:** `RegisterForm.tsx` ahora pide `dni`, `phone` y `city` como campos obligatorios junto a `full_name`, y los manda en `options.data` del `signUp()` — mismo mecanismo que ya se usaba para `full_name`. `city` usa un combobox con autocompletado (`CityCombobox.tsx`) sobre una lista estática de localidades de Santa Fe y alrededores (`src/lib/data/ciudades.ts`), pero acepta texto libre para no bloquear clientes de localidades no listadas. `dni` se valida con regex `^\d{7,8}$` (formato DNI argentino, sin puntos).
+- **Razonamiento:** Antes estos campos se iban a completar "después en el perfil", pero esa UI de completar perfil nunca se construyó — quedaban sin pedirse en ningún lado. Pedirlos en el registro con email/password es más simple que armar un flujo de perfil incompleto aparte, y reutiliza el patrón ya validado de `full_name` en `raw_user_meta_data`.
+- **Gap conocido — Google OAuth:** el botón "Registrarse con Google" redirige directo a OAuth y no pasa por este formulario, así que estos 3 campos no se piden en ese flujo. ~~Se deja así intencionalmente por ahora; un flujo de "completar perfil" post-OAuth queda pendiente como tarea aparte, no bloqueante.~~ **Resuelto por DEC-020** — el gate en `/completar-perfil` cubre este caso.
+- **⚠️ Acción pendiente para Kevin (degradada a no-bloqueante, ver DEC-020):** el trigger `handle_new_user` (`supabase/migrations/20260615000001_handle_new_user.sql`) solo lee `full_name` de `raw_user_meta_data` al insertar en `profiles`. El formulario ya manda `dni`, `phone` y `city`, pero **se pierden** hasta que el trigger se actualice para leer también esos 3 campos e incluirlos en el `insert into public.profiles`. Reflejado también en "Bloqueos activos" de `PROJECT_STATUS.md`.
+- **Tomada por:** Fran (Frontend Agent) — aprobado por CTO Agent
+- **Fecha:** 16 de julio de 2026
+
+---
+
+### DEC-020 — Gate `/completar-perfil`: único punto de control para dni/phone/city
+- **Decisión:** El chequeo de "perfil incompleto" vive en un solo lugar: `src/app/(cliente)/layout.tsx`, que ya envuelve todas las rutas cliente (`/perfil` y cualquier futura). Si `role === 'cliente'` y falta `dni`, `phone` o `city`, redirige a `/completar-perfil` — una ruta nueva, deliberadamente **fuera** de `(cliente)`, para no heredar el mismo gate y generar un loop de redirect. `/completar-perfil` actualiza el perfil existente con `supabase.from('profiles').update(...)`, permitido por la policy RLS ya existente `"profiles: usuario actualiza el suyo" (auth.uid() = id)` — no hizo falta Edge Function.
+- **Razonamiento:** Parchear cada punto de entrada al login (`LoginForm.tsx`, `auth/callback/route.ts`, `login/page.tsx`, `register/page.tsx`) para redirigir condicionalmente es frágil — cualquier entrada nueva o olvidada rompe la garantía. Todos esos puntos ya redirigen a `/perfil` (o la ruta del rol); centralizar el chequeo en el layout que envuelve `/perfil` cubre login email/password, Google OAuth, navegación directa por URL y refresh de página sin tocar ninguno de esos archivos.
+- **Efecto colateral positivo:** esto también cierra el gap de Google OAuth registrado en DEC-019 (ya no es "tarea futura": el flujo real es login con Google → perfil incompleto → `/completar-perfil`) y baja de prioridad el pendiente del trigger `handle_new_user` — si Kevin no lo actualiza, el usuario de email/password simplemente pasa por `/completar-perfil` una vez y reingresa los datos, en vez de quedar bloqueado.
+- **Tomada por:** Fran (Frontend Agent) — aprobado por CTO Agent
+- **Fecha:** 16 de julio de 2026
+
+---
+
+### DEC-021 — UI división de cuenta: búsqueda client-side vía Server Action, sin navegación GET
+- **Decisión:** `/caja/division` (`DivisionCuentaForm.tsx`) rompe con el patrón de `/caja` y `/caja/canje`, que buscan clientes vía `<form method="GET">` con `?q=` y re-renderizan la página server-side. En división de cuenta, el cajero busca y agrega N clientes a una lista que se va acumulando en memoria; una búsqueda por GET perdería esa lista en cada vuelta. En cambio, `buscarClienteParaDivision` es una Server Action que se llama directamente como función async desde el client component (patrón estándar de React Server Functions, sin `<form action>` de por medio) y devuelve el dato en vez de redirigir. Lo mismo para `dividirCuenta`: no usa `redirect()` como `registrarConsumo`/`confirmarCanje` — devuelve `{ok, data|code}` para que el resultado (o el error) se muestre inline en el mismo estado del componente, sin perder lo ya cargado.
+- **Razonamiento:** Mantener consistencia de patrón por consistencia hubiera significado codificar la lista de clientes agregados y sus montos en la URL entre cada búsqueda — mucho más frágil y menos legible que estado de React local. Server Actions llamadas directamente (no como `action` de un `<form>`) son parte de la API estándar de React/Next.js, no un hack.
+- **Validación cruzada en el cliente:** además de las validaciones del backend (mínimo 2 splits, montos positivos, `client_id` únicos, `amount_mismatch` con tolerancia ±0.01), la UI adelanta el chequeo de `amount_mismatch` client-side (compara la suma de montos ingresados contra un campo opcional "monto total de la mesa") para evitar una ida y vuelta al servidor por un error de tipeo.
+- **Tomada por:** Fran (Frontend Agent) — aprobado por CTO Agent
+- **Fecha:** 16 de julio de 2026
+
+---
+
+### DEC-022 — Fix de 2 bugs bloqueantes encontrados en la revisión previa a QA (`QA_CHECKLIST.md`)
+- **Decisión:** Se corrigieron los 2 hallazgos marcados como bloqueantes en el resumen de `QA_CHECKLIST.md`:
+  1. **Ofertas por horario que cruzan medianoche nunca se activaban** (`isTimeOfferActive` en `src/app/(public)/carta/page.tsx`): la comparación `nowInTZ >= start_time && nowInTZ <= end_time` es matemáticamente imposible de cumplir cuando `start_time > end_time` (ej. `22:00`–`02:00`). Fix: si `start_time <= end_time` se mantiene la lógica original; si `start_time > end_time` la oferta está activa cuando `nowInTZ >= start_time || nowInTZ <= end_time` (unión de los dos tramos en vez de intersección). Verificado con 8 casos borde vía script descartable (normal dentro/fuera, medianoche dentro/fuera de ambos tramos, límites inclusivos) — los 8 pasaron.
+  2. **`adjustPoints` no parseaba el código de error del Edge Function** (`src/lib/actions/admin-clients.ts`): un `throw new Error(error.message)` genérico hacía que un débito con `insufficient_points` (u otro error) terminara en una pantalla de error de Next.js en vez de un mensaje amigable. Fix: mismo patrón que `iniciarCanje`/`confirmarCanje` — parsea `error.context` (Response) como JSON para extraer `code`, y redirige a `/admin/clientes/[id]?error=<code>` en vez de crashear. `PointsAdjustForm.tsx` ahora acepta `errorCode` y muestra un banner mapeado (`insufficient_points`, `invalid_points`, `client_not_found`, `insufficient_role`/`unauthorized`, fallback `unknown`).
+- **Alcance explícito — no incluido:** el Edge Function `adjust-points` no reenvía el detalle "Disponible: X, Requerido: Y" que genera la función SQL, solo el `code`. El banner de error no muestra esas cifras exactas — mostrarlas requeriría tocar el Edge Function (dominio de Kevin) y no formaba parte de este fix.
+- **Los otros 3 gaps del resumen de `QA_CHECKLIST.md`** (soft-delete sin filtrar en listas admin, buscador de clientes sin email, sin selector de fechas en estadísticas) quedan documentados como pendientes, no bloqueantes — decisión explícita de priorización del CTO Agent.
+- **Tomada por:** Fran (Frontend Agent) — aprobado por CTO Agent
+- **Fecha:** 16 de julio de 2026
+
+---
+
 ## Decisiones pendientes (Kevin y Fran deben resolver)
 
 ### DEC-017 — Leaked Password Protection: bloqueada por plan Free de Supabase
@@ -168,6 +207,58 @@
 - **Implicación para Kevin/Fran:** Ninguna acción de código requerida hasta que el cliente confirme el dominio. Cuando esté disponible: configurar el dominio en Vercel y actualizar las URLs de redirect de Supabase Auth (callback de Google OAuth, etc.).
 - **Estado:** Pendiente — no bloqueante para producción.
 - **Fecha:** 15 de julio de 2026
+
+---
+
+### DEC-023 — 🔴 BLOQUEANTE CRÍTICO: `categories`, `products` y `rewards` rotas para usuarios anónimos (`permission denied for function current_user_role`)
+- **Hallazgo:** Durante la ejecución del QA (Flujo 4 — Carta pública), `/carta` cargaba sin productos ni categorías. Se descartó que fuera un bug de frontend probando las tablas directamente contra la API REST de Supabase con la `anon key` (la misma que usa la app, sin pasar por Next.js):
+  - `settings`, `promotions`, `time_offers` → **OK**, devuelven datos.
+  - `categories`, `products`, `rewards` → **`{"code":"42501", "message":"permission denied for function current_user_role"}`** en cualquier lectura, incluso `select` simples sin filtros.
+- **Impacto:** `/carta` (la carta digital pública, el flujo más visible del producto) no muestra ni un solo producto ni categoría a ningún visitante sin sesión — es decir, a **todos** los clientes reales del restaurante. También rompe la lista de recompensas en `/perfil` (`rewards`), y probablemente cualquier pantalla admin que dependa de estas tablas.
+- **Causa técnica:** la función `public.current_user_role()` (creada en `supabase/migrations/20260625000001_fix_grants_and_rls.sql`, `SECURITY DEFINER`, pensada originalmente solo para la policy de `profiles`) aparece referenciada en las policies de lectura de `categories`/`products`/`rewards` en la base **real**, pero esa función nunca recibió `GRANT EXECUTE` para los roles `anon`/`authenticated`. Ninguna migración del repo modifica las policies de estas 3 tablas para usar `current_user_role()` — el código vivo en Supabase diverge del repo.
+- **Pista fuerte sobre el origen (a confirmar por Kevin, no verificado directamente):** DEC-017 (15 jul 2026) menciona que los hallazgos del linter de seguridad sobre "grants de funciones SECURITY DEFINER expuestas vía RPC" se resolvieron vía una migración llamada `fix_security_definer_grants` — **esa migración no existe en `supabase/migrations/`**. Es consistente con que ese fix haya sido aplicado directamente en el Dashboard (violando el flujo obligatorio de DEC-016) y que, al revocar el `EXECUTE` público sobre funciones `SECURITY DEFINER` para cerrar el hallazgo del linter, se haya revocado también el acceso que las policies de `categories`/`products`/`rewards` necesitaban para `anon`/`authenticated`, sin volver a otorgarlo explícitamente para esos roles.
+- **Qué necesita hacer Kevin:**
+  1. Confirmar en el Dashboard (Database → Functions → `current_user_role`, y Database → Policies de `categories`/`products`/`rewards`) qué cambió realmente y cuándo.
+  2. `GRANT EXECUTE ON FUNCTION public.current_user_role() TO anon, authenticated;` (o revisar si las policies de estas 3 tablas deberían simplemente volver a `using (true)` para lectura pública, sin pasar por `current_user_role()` en absoluto — más simple y no depende de la función).
+  3. Aplicar el fix como migración nueva vía `supabase migration new` + `supabase db push` (DEC-016), **no** pegar SQL en el Dashboard otra vez.
+  4. Reconciliar el repo con el estado real de la DB: si `fix_security_definer_grants` existe en producción pero no en el repo, hay que traerla (`supabase db pull` o reconstruir el SQL manualmente) para que el historial de migraciones vuelva a ser la fuente de verdad.
+- **Por qué no lo resuelve Fran:** es RLS/grants sobre la base de datos — dominio exclusivo del Backend Agent. Tocarlo sin conocer el estado real de las policies arriesga romper algo más, o volver a violar DEC-016.
+- **Estado:** 🟢 Resuelto a nivel de datos (verificado 26 de julio de 2026) — pero con una advertencia de proceso.
+  - **Verificación en vivo (Fran, mismo método que el hallazgo original):** consulta directa a `/rest/v1/categories`, `/rest/v1/products` y `/rest/v1/rewards` con la `anon key`, sin pasar por el frontend. Las 3 tablas devuelven datos correctamente — ya no aparece `permission denied for function current_user_role`.
+  - **⚠️ El fix no está en ningún archivo de `supabase/migrations/`** — se buscó `current_user_role` y `fix_security_definer_grants` en el repo y no aparece ninguna migración nueva desde `20260715034755_agregar_dni_phone_city_profiles.sql`. Esto significa que el `GRANT EXECUTE` (u otro cambio equivalente) se aplicó **de nuevo directamente en el Dashboard de Supabase**, repitiendo el mismo patrón que causó este bug originalmente y volviendo a violar el flujo obligatorio de DEC-016. El repo vuelve a divergir del estado real de la DB — sigue pendiente el paso 4 del plan original (`supabase db pull` o reconstruir la migración a mano) para que el historial de migraciones sea otra vez la fuente de verdad.
+  - **Impacto:** desbloquea `/carta` para anónimos y la lista de recompensas en `/perfil` — el QA puede retomar los Flujos 4 y 5.
+- **Tomada por:** Fran (Frontend Agent) — diagnóstico inicial y verificación de resolución; corrección aplicada por Kevin (Backend Agent) fuera del flujo de migraciones — pendiente que Kevin la documente y regularice con una migración real.
+- **Fecha:** 17 de julio de 2026 (hallazgo) — 26 de julio de 2026 (verificado resuelto)
+
+---
+
+### DEC-024 — Fix: falta `color-scheme: dark` — el navegador forzaba un modo oscuro genérico sobre el theme real
+- **Hallazgo:** durante el QA de Admin (Flujo 9), capturas de pantalla de `/carta` y `/admin/productos` mostraban toda la UI en fondo negro plano, sin ninguna distinción visual entre `--background`, `--surface` y filas de tabla — se veía "roto" pero sin ningún error en consola ni en las respuestas del servidor.
+- **Método de diagnóstico:** en vez de asumir por inspección visual, se muestrearon píxeles reales de ambas capturas (`System.Drawing` vía PowerShell) en puntos que deberían tener colores distintos según `globals.css`. Los tres puntos (fondo de página, sidebar, fila de tabla) dieron **exactamente RGB(10,10,10)** en ambas capturas — un valor plano que no corresponde a ningún color real definido (`--background: #1f352a`, `--surface: #2a4535`, etc.). Si el CSS realmente no hubiera cargado, `curl` lo habría mostrado (no fue el caso: el chunk CSS servido contenía los colores correctos, confirmado en la sesión anterior). La única explicación consistente con "el servidor manda el CSS correcto pero el navegador pinta otra cosa" es un post-procesamiento del lado del navegador.
+- **Causa:** faltaba declarar `color-scheme: dark` (CSS) y el meta tag equivalente. Sin esa señal, navegadores basados en Chromium con "modo oscuro forzado para contenido web" activado (heurística de accesibilidad/comodidad, común en Windows con dark mode del sistema) asumen que el sitio no tiene soporte nativo de dark mode y le aplican su propio filtro de repintado, aplanando toda la paleta real del proyecto a sus propios grises/negros genéricos — exactamente lo que se veía.
+- **Fix:**
+  1. `src/app/globals.css` — `color-scheme: dark;` agregado dentro de `:root`.
+  2. `src/app/layout.tsx` — `export const viewport: Viewport = { colorScheme: "dark" }`. **Nota de versión:** en Next.js 14+ (y por lo tanto acá en Next 16) `colorScheme` ya no se declara dentro de `metadata` — está deprecado ahí desde v13.2 en favor de un `export const viewport` separado (`generate-viewport.md` en `node_modules/next/dist/docs`). El primer intento de ponerlo en `metadata` compiló sin error mostrando el problema real: no generaba ningún meta tag. Se corrigió moviéndolo a `viewport` y se verificó que el `<meta name="color-scheme" content="dark">` apareciera en el HTML servido.
+- **Verificado:** `tsc`/`eslint` limpios; el meta tag y la propiedad CSS confirmados presentes en la respuesta real del servidor.
+- **Tomada por:** Fran (Frontend Agent) — aprobado por CTO Agent
+- **Fecha:** 17 de julio de 2026
+
+---
+
+### DEC-025 — Fix: listas de admin no filtraban `deleted_at` (gap #1 del QA_CHECKLIST, elevado de "no bloqueante" a corregido)
+- **Hallazgo confirmado en vivo:** durante el QA de Admin (Flujo 9), se eliminó un producto — el banner mostró "Eliminado correctamente" pero el producto siguió apareciendo en `/admin/productos`. Se verificó que `deleteProduct` sí hace el soft-delete correctamente (`update({ deleted_at: now() })`); el problema era exclusivamente que la query de la lista no excluía filas con `deleted_at` no nulo. Exactamente el gap #1 que ya estaba documentado en `QA_CHECKLIST.md` desde la revisión de código previa al QA, pero catalogado como "no bloqueante" — al aparecer en la prueba real se decidió corregirlo ahora en vez de dejarlo para después.
+- **Alcance del fix — 4 archivos, mismo patrón (`.is('deleted_at', null)`):**
+  1. `src/app/(admin)/admin/productos/page.tsx` — lista de productos.
+  2. `src/app/(admin)/admin/categorias/page.tsx` — lista de categorías, y también la query de conteo de productos por categoría (antes contaba productos eliminados en el número mostrado, ahora es consistente con lo que realmente se ve en `/admin/productos`).
+  3. `src/app/(admin)/admin/productos/nuevo/page.tsx` — dropdown de categoría al crear un producto (antes permitía asignar un producto nuevo a una categoría ya eliminada).
+  4. `src/app/(admin)/admin/productos/[id]/editar/page.tsx` — mismo dropdown al editar.
+- **No incluido en este fix (deliberado, fuera de alcance):**
+  - Los fetches de una fila puntual por `id` (`admin/productos/[id]/editar`'s propio producto, `admin/categorias/[id]/editar`'s propia categoría) no se tocaron — son lookups directos por id, no listados, y no es el bug reportado.
+  - La carta pública (`/carta`) sigue sin hacer join-filtro sobre `deleted_at` de la categoría padre de un producto — un producto cuya categoría fue eliminada podría seguir agrupado bajo esa categoría "fantasma" ahí. Esto es un caso distinto (bloqueado además por DEC-023 para poder verificarlo en vivo) — no se tocó en este fix.
+  - Si la categoría actual de un producto fue eliminada y se entra a editar ese producto puntual, el dropdown ya no incluye esa categoría entre las opciones (porque ahora filtra `deleted_at`) — el `<select>` quedaría sin ninguna opción coincidente con el valor actual. No se agregó lógica para incluir la categoría actual como opción deshabilitada; es una mejora de UX a futuro si se vuelve un problema real, no bloqueante ahora mismo.
+- **Verificado:** `tsc`/`eslint` limpios, `npm run build` compila las 25 rutas.
+- **Tomada por:** Fran (Frontend Agent) — aprobado por CTO Agent (pedido directo durante ejecución de QA)
+- **Fecha:** 17 de julio de 2026
 
 ---
 
