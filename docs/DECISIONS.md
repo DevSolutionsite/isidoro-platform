@@ -285,6 +285,7 @@
 - **Limpieza asociada:** se detectaron y borraron productos "fantasma" ya soft-deleted de sesiones de test anteriores (`a`, `b` x2, `Prueba 02-07`, `Empanadas (x4)` placeholder) que quedaban en la tabla aunque invisibles en la app — no eran de esta sesión, probablemente de pruebas previas de Kevin o Fran. También se eliminó una oferta de horario de prueba ("dexf") que bloqueaba el borrado del producto placeholder "Tiramisú" por FK.
 - **Tomada por:** Fran (Frontend Agent) — pedido directo del usuario con la URL de la carta real.
 - **Fecha:** 26 de julio de 2026
+- **Corrección posterior (26 jul, mismo día):** el insert de las 12 categorías quedó duplicado — se ejecutó dos veces con ~220ms de diferencia (probablemente un reintento de red del propio `curl`), dejando 24 filas: 12 con los 140 productos reales y 12 vacías con IDs distintos. `/carta` no se vio afectada (las vacías no renderizan sección al no tener productos), pero `/admin/categorias` sí mostraba cada categoría duplicada. Detectado por Fran (usuario) al revisar el admin. Se identificaron las 12 filas sin productos por `category_id` y se borraron directo por API — las 12 con productos y sus IDs quedaron intactas. Verificado después: `/admin/categorias` muestra 12 filas únicas con los conteos correctos, `/carta` sin cambios.
 
 ---
 
