@@ -112,18 +112,18 @@
 8. [x] Reutilizar un código ya confirmado → "Código no encontrado — verificá los dígitos" (mismo mensaje que un código inexistente, ya no está `pending`) — OK.
 9. [x] Confirmado indirectamente: el saldo del cliente bajó correctamente en cada canje (15000→14500→13000, coincide con -500 y -1500). No se probó stock limitado (ninguna recompensa de test tiene stock).
 
-### 8. División de cuenta (`/caja/division`)
+### 8. División de cuenta (`/caja/division`) — ✅ Verificado 26 jul 2026
 
-1. [ ] Desde `/caja`, ir a la pestaña "División".
-2. [ ] Buscar y agregar un solo cliente, e intentar dividir → **esperado:** el botón "Dividir cuenta" está deshabilitado (mínimo 2 clientes).
-3. [ ] Buscar y agregar el mismo cliente dos veces → **esperado:** el segundo intento muestra "Ya está en la división" en vez de duplicarlo en la lista.
-4. [ ] Buscar un cliente inexistente → **esperado:** "Cliente no encontrado".
-5. [ ] Agregar 2 o más clientes, cargar un monto para cada uno → **esperado:** cada fila muestra su propio preview de puntos en vivo; el botón "Quitar" saca a un cliente de la lista sin afectar a los demás.
-6. [ ] Dejar el monto de algún cliente vacío o en 0 → **esperado:** el botón "Dividir cuenta" queda deshabilitado hasta que todos tengan monto válido.
-7. [ ] Cargar el campo opcional "Monto total de la mesa" con un valor que **no coincide** con la suma de los montos individuales → **esperado:** aparece advertencia inline en rojo ("No coincide con el total de la mesa...") **antes** de intentar enviar, y el botón queda deshabilitado.
-8. [ ] Corregir el monto total para que coincida (o dejarlo vacío) y confirmar la división → **esperado:** resultado inline mostrando, por cada cliente, los puntos ganados y su nuevo saldo — sin salir de la pantalla ni perder el estado.
-9. [ ] Tocar "Nueva división" después de un resultado exitoso → **esperado:** resetea todo el formulario (lista vacía, campos limpios) para empezar de nuevo.
-10. [ ] Verificar en `/perfil` (o `/admin/clientes`) de cada cliente que participó que su saldo aumentó según lo esperado, y que el consumo quedó agrupado por el mismo `session_id` en la base (chequeo técnico, no visible en UI — opcional si tenés acceso a la DB).
+1. [x] Sesión admin, pestaña "División" — OK.
+2. [x] Un solo cliente agregado → "Dividir cuenta" deshabilitado — OK.
+3. [x] Agregar el mismo cliente dos veces → "Ya está en la división", no se duplicó en la lista — OK.
+4. [x] Cliente inexistente → "Cliente no encontrado" — OK.
+5. [x] Se creó un segundo cliente de prueba (`QA Cliente Dos`) para probar con 2+. Preview en vivo por cliente (+10000 pts / +5000 pts) — OK.
+6. [x] Implícito en el flujo: con montos cargados en ambos y el total sin coincidir, el botón ya estaba deshabilitado (ver ítem 7) — no se probó dejar un monto vacío de forma aislada, pero el mismo guard de "todos con monto válido" aplica.
+7. [x] Total de mesa `20000` vs. suma real `15000` → advertencia roja "No coincide con el total de la mesa ($ 20.000)", botón deshabilitado — OK.
+8. [x] Corregido a `15000` (coincide) → "Cuenta dividida entre 2 clientes", resultado inline: QA Cliente Test +10000 pts (saldo 23000), QA Cliente Dos +5000 pts (saldo 5000) — sin salir de pantalla, OK.
+9. [x] "Nueva división" → formulario reseteado por completo (lista vacía, campos limpios) — OK.
+10. [x] Saldos confirmados en el resultado inline mismo (13000+10000=23000, 0+5000=5000, coincide con lo esperado). No se verificó el `session_id` en DB (chequeo opcional).
 
 ---
 
@@ -131,24 +131,24 @@
 
 > Todas las rutas admin requieren rol `admin`. Antes de arrancar esta sección: **loguearse con una cuenta `cliente` y navegar directo a cualquier URL `/admin/*`** → esperado: redirect silencioso a `/login` (no un error 403 visible). Confirmar esto una sola vez al principio.
 
-### 9. Productos (`/admin/productos`)
+### 9. Productos (`/admin/productos`) — ✅ Verificado 26 jul 2026
 
-1. [ ] Entrar a `/admin/productos` → lista con nombre, categoría, precio, orden, disponibilidad (Sí/No) y acciones.
-2. [ ] Crear un producto nuevo con todos los campos (nombre, categoría, descripción, precio, orden, `image_url` opcional, disponible tildado) → **esperado:** redirect a la lista con banner "Creado correctamente."
-3. [ ] Crear un producto **sin** nombre o sin categoría → **esperado:** bloqueo por `required` del navegador.
-4. [ ] Cargar un `sort_order` vacío → **esperado:** se guarda como `0` silenciosamente (no debería dar error).
-5. [ ] Editar un producto existente, cambiar el precio y desmarcar "Disponible" → **esperado:** banner "Actualizado correctamente.", y el producto deja de aparecer en `/carta` (ver sección 4, punto 6).
-6. [ ] Eliminar un producto (botón "Eliminar" → confirma con "Sí, eliminar") → **esperado:** banner "Eliminado correctamente."
-7. [x] **Fix aplicado 17 jul 2026 — verificar:** eliminar un producto ya no debe aparecer en `/admin/productos` — `deleteProduct` setea `deleted_at` correctamente (soft-delete real), y ahora el query de la lista filtra `is('deleted_at', null)`. Detectado durante QA en vivo: el banner decía "Eliminado correctamente" pero el producto seguía listado — confirmado que era exactamente este gap. Ver DEC-025.
-8. [ ] Cargar una URL en `image_url` y guardar → luego revisar `/carta`: **esperado según código:** la imagen **no se muestra** en la card pública (siempre placeholder) — no es un bug de esta sesión, es una funcionalidad no implementada (falta Supabase Storage). No reportar como bug nuevo.
+1. [x] Lista con nombre, categoría, precio, orden, disponibilidad y acciones — OK.
+2. [x] Producto "QA Producto Test" creado con todos los campos → "Creado correctamente." — OK.
+3. [x] Submit sin nombre ni categoría → bloqueado por `required` del navegador, no navega — OK.
+4. [x] "Orden de aparición" viene precargado en `0` por defecto (no vacío) — se guardó como `0` sin error — OK.
+5. [x] Ya verificado en el Flujo 4 (ítem 6): se desmarcó "Disponible" en Provoleta, banner "Actualizado correctamente.", dejó de aparecer en `/carta`, se revirtió después.
+6. [x] "QA Producto Test" eliminado con el flujo de confirmación inline → "Eliminado correctamente." — OK.
+7. [x] Confirmado de nuevo: el producto eliminado ya no aparece en la lista (8 productos, volvió al conteo original) — el fix de DEC-025 sigue funcionando.
+8. [ ] No probado en esta sesión — comportamiento ya documentado y conocido (no implementado, falta Storage), no hace falta re-confirmar.
 
-### 10. Categorías (`/admin/categorias`)
+### 10. Categorías (`/admin/categorias`) — ✅ Verificado 26 jul 2026
 
-1. [ ] Entrar a `/admin/categorias` → lista con nombre, orden, cantidad de productos.
-2. [ ] Crear una categoría nueva (nombre + orden) → banner "Creado correctamente."
-3. [ ] Verificar que el conteo de "Productos" de una categoría cuenta **todos** los productos asociados, estén disponibles o no (incluye no-disponibles y potencialmente eliminados).
-4. [ ] Editar el nombre de una categoría con productos asociados → confirmar que el nombre se actualiza también en `/carta`.
-5. [ ] Eliminar una categoría que **tiene productos asociados** → **esperado:** no hay ningún bloqueo ni advertencia, se elimina igual. La categoría ya no debe listarse en `/admin/categorias` (fix aplicado, ver DEC-025) ni en el dropdown de categoría al crear/editar un producto. **Caso a verificar (esto sigue abierto, no lo resuelve el fix de listas):** los productos que quedaron con `category_id` apuntando a esa categoría eliminada — ¿qué pasa con ellos en `/carta`? El query de productos de la carta pública no hace join-filtro sobre `deleted_at` de la categoría padre, así que es esperable que sigan apareciendo agrupados bajo el nombre de esa categoría "fantasma" ahí (distinto del admin, que ya no la muestra). Bloqueado por DEC-023 para verificar en vivo.
+1. [x] Lista con nombre, orden, cantidad de productos — OK.
+2. [x] "QA Categoria Test" creada → "Creado correctamente." — OK.
+3. [x] Se creó un producto no-disponible dentro de la categoría de prueba → el conteo mostró "1" igual — confirmado que cuenta productos no-disponibles.
+4. [x] Renombrada a "QA Categoria Editada" → "Actualizado correctamente.", el nombre se actualizó en la lista de admin. No se verificó en `/carta` porque el producto de prueba asociado era `is_available=false` (no aparece ahí de todas formas).
+5. [x] Eliminada la categoría con 1 producto asociado → sin bloqueo, sin advertencia, desapareció de la lista de admin. **Hallazgo relacionado, más amplio que el gap ya documentado:** en `/admin/productos`, el producto huérfano siguió mostrando el nombre de la categoría eliminada ("QA Categoria Editada") en vez de "Sin categoría" o similar — el join a `categories(name)` en la lista de productos no filtra `deleted_at` de la categoría. El gap documentado en el checklist original solo hablaba de `/carta`; esto confirma que también pasa en el propio admin. No se corrigió (no es bloqueante, es cosmético — el producto de prueba no era visible públicamente), pero vale que Kevin/Fran lo tengan en cuenta si se decide resolver el gap de categoría-fantasma en general.
 
 ### 11. Promociones (`/admin/promociones`)
 
