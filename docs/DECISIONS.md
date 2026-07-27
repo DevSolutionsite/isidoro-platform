@@ -262,6 +262,19 @@
 
 ---
 
+### DEC-026 — Fix: auto-submit del código de canje en `/caja/canje` siempre fallaba con "código inválido"
+
+- **Hallazgo (QA en vivo, Flujo 7):** al tipear los 6 dígitos de un código de canje válido en `ConfirmarCanjeForm.tsx`, el auto-submit al completar el 6to dígito **siempre** devolvía `invalid_code_format`, sin importar la velocidad de tipeo. Confirmado con dos códigos distintos generados en el momento (ambos rechazados vía auto-submit) — descartando que fuera un código vencido o mal generado.
+- **Causa raíz:** `handleChange` llamaba a `formRef.current?.requestSubmit()` de forma **síncrona**, en el mismo tick que `setDigits(next)`. `requestSubmit()` dispara el submit (y por lo tanto Next.js serializa el `FormData` del formulario) antes de que React re-renderice y actualice el `value` del último `<input type="hidden" name="d5">` — por lo tanto el código enviado al server quedaba siempre incompleto/desactualizado en el último dígito.
+- **Cómo se aisló:** se armó un caso de control cargando los 6 dígitos vía DOM (sin pasar por el auto-submit) y confirmando manualmente con el botón — el mismo código que fallaba por auto-submit fue aceptado sin problema, confirmando que el código era válido y el bug estaba exclusivamente en el timing del auto-submit.
+- **Fix:** se reemplazó la llamada síncrona por un `useEffect` que dispara `requestSubmit()` cuando `digits` pasa a estar completo (`isFull`), con un `ref` para evitar doble submit. Los efectos corren después de que React commitea el render, así que los hidden inputs ya reflejan el dígito final. Ver `src/components/cajero/ConfirmarCanjeForm.tsx`.
+- **Impacto:** esto rompía la función principal de "escribir el código y que se confirme solo" para **todo** cajero que tipeara el código dígito por dígito (el flujo más común) — no solo un edge case. El flujo de pegar (Ctrl+V) no está afectado porque no dispara auto-submit; requiere tocar el botón manualmente, que sí usa el estado ya commiteado.
+- **Verificado:** `tsc` limpio. Probado en vivo con 2 códigos reales generados desde `/perfil` de una cuenta de prueba — confirmados correctamente vía auto-submit después del fix (`-500 pts` y `-1500 pts`, saldos actualizados). También verificados en la misma sesión: código reutilizado → "Código no encontrado"; código inexistente → "Código no encontrado".
+- **Tomada por:** Fran (Frontend Agent) — encontrado y corregido durante la ejecución de `QA_CHECKLIST.md` Flujo 7.
+- **Fecha:** 26 de julio de 2026
+
+---
+
 ## System Prompts de los agentes
 
 ### CTO Agent — System Prompt

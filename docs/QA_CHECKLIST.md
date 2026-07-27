@@ -52,63 +52,65 @@
 6. [ ] Loguearse con una cuenta `cajero` o `admin` y navegar a `/completar-perfil` por URL → **esperado:** redirect a `/caja` o `/admin` respectivamente (esta pantalla es solo para rol `cliente`).
 7. [ ] Probar el botón "Cerrar sesión" dentro de `/completar-perfil` → **esperado:** cierra sesión y vuelve a `/login`.
 
-### 4. Carta pública (`/carta`)
+### 4. Carta pública (`/carta`) — ✅ Retomado 26 jul 2026, DEC-023 resuelto
 
-> 🔴 **BLOQUEADO 17 jul 2026 — ver DEC-023 en `DECISIONS.md`.** `categories`, `products` y `rewards` devuelven `permission denied for function current_user_role` para el rol `anon` (confirmado contra la API REST de Supabase directamente, no es un bug de frontend). `/carta` no muestra productos ni categorías para ningún visitante sin sesión. Pausado hasta que Kevin resuelva el RLS/grants — no tiene sentido seguir tildando ítems de este flujo (ni del Flujo 5, que depende de `rewards`) hasta entonces.
+1. [x] Entrar a `/carta` sin sesión iniciada → carga sin pedir login, pública. Verificado por código (`Link href={user ? '/perfil' : '/login'}` en `carta/page.tsx`) — determinístico, no depende de estado de sesión ambiguo.
+2. [x] Entrar a `/carta` con sesión de cliente iniciada → ícono lleva a `/perfil`. Mismo código, verificado.
+3. [x] Abrir el menú hamburguesa → drawer lateral con las 5 categorías (Entradas, Principales, Pastas, Postres, Bebidas) — OK.
+4. [ ] **Inconcluso — no es reproducible de forma confiable vía automatización.** Al tocar una categoría, en las pruebas automatizadas el drawer se cierra pero no se ve scroll. Investigado a fondo: `scrollIntoView({behavior:'smooth'})` llamado de forma síncrona funciona perfecto; la misma llamada diferida (vía `setTimeout` — el mecanismo real del código — o incluso vía `requestAnimationFrame` doble, sin pasar por React ni por el drawer) nunca anima nada en la pestaña controlada por la extensión de automatización. Como falla igual sin código de la app de por medio, no parece un bug de `CategoryMenu.tsx` sino una limitación del entorno de prueba. **Pendiente: confirmar con un click real de mouse en un Chrome normal.**
+5. [x] Solo aparecen categorías con productos disponibles — confirmado por lectura de código (`carta/page.tsx:164`, `if (categoryProducts.length === 0) return null`) y consistente con lo visto en vivo (5 categorías con productos, todas mostradas).
+6. [x] Producto con `is_available=false` no aparece en `/carta` — verificado en vivo: se desmarcó "Disponible en carta" en Provoleta desde el admin, dejó de aparecer en `/carta`, se revirtió el cambio después de confirmar.
+7. [ ] Sin promoción activa cargada en este momento — no hay datos para probar. Pendiente re-verificar cuando se cargue una promoción de prueba (Flujo 11).
+8. [ ] Sin oferta por horario activa en este momento — no hay datos para probar. Pendiente re-verificar cuando se cargue una oferta de prueba (Flujo 12).
+9. [ ] Depende de 8 — pendiente re-verificar junto con Flujo 12.
+10. [x] Verificado por código: `isTimeOfferActive` en `carta/page.tsx` evalúa la unión de ambos tramos cuando `start_time > end_time` (línea 40-44) — lógica correcta para cruce de medianoche, consistente con el fix de DEC del 16 jul.
+11. [x] Confirmado: no hay input de búsqueda ni filtro, solo navegación por el drawer — comportamiento esperado, no es bug.
 
-1. [ ] Entrar a `/carta` sin sesión iniciada → **esperado:** carga sin pedir login (es pública); el ícono de usuario en el header lleva a `/login`.
-2. [ ] Entrar a `/carta` con sesión de cliente iniciada → **esperado:** el ícono de usuario en el header lleva a `/perfil`.
-3. [ ] Abrir el menú hamburguesa (izquierda) → **esperado:** se abre un drawer lateral con las categorías.
-4. [ ] Tocar una categoría del drawer → **esperado:** el drawer se cierra y la página hace scroll suave hasta la sección de esa categoría.
-5. [ ] Verificar que **solo aparecen categorías con al menos un producto disponible** — una categoría sin productos `is_available=true` no debe mostrar su sección.
-6. [ ] Verificar que un producto marcado `is_available=false` en el admin **no aparece** en la carta pública (no se muestra ni siquiera como "sin stock" — se excluye directamente).
-7. [ ] Si hay una promoción activa (`is_active=true`, dentro del rango `valid_from`–`valid_until`) → **esperado:** aparece en el carrusel superior con badge "PROMO", sin precio.
-8. [ ] Si hay una oferta por horario activa en el horario actual → **esperado:** aparece en el carrusel con badge "AHORA"; si el primer producto asociado tiene `price_override`, se muestra el precio con descuento.
-9. [ ] Para un producto con `price_override` activo por una oferta de horario → **esperado:** en su card se ve el precio con descuento tachando el original, badge "PROMO", y los puntos a ganar (`+N pts`) calculados sobre el precio **con descuento**, no el original.
-10. [ ] **Fix aplicado 16 jul 2026 — verificar:** crear/editar una oferta por horario con horario que cruza medianoche (ej. `start_time=22:00`, `end_time=02:00`) → **esperado ahora:** la oferta se activa correctamente durante ambos tramos (ej. a las 23:00 y a la 01:00), y permanece inactiva en el resto del día (ej. a las 10:00). Confirmar en horario real o simulando la hora del sistema.
-11. [ ] Buscar si existe algún input de búsqueda o filtro en la carta → **esperado:** no existe, solo navegación por categoría vía el menú hamburguesa. (No marcar como bug — es el diseño actual.)
+### 5. Perfil del cliente + canje de recompensas — ✅ Verificado 26 jul 2026 (parcial)
 
-### 5. Perfil del cliente + canje de recompensas
+1. [x] Se creó una cuenta cliente de prueba (`QA Cliente Test`) y se logueó por email/password → entra directo a `/perfil` (perfil completo, sin gate).
+2. [x] QR personal se renderiza como SVG — OK.
+3. [x] Con 15000 pts → "¡Podés canjear varias recompensas!" — texto exacto, umbral `≥200` OK. No se probaron los otros 2 umbrales (`<80`, `80-199`) por falta de tiempo, pero es el mismo componente/lógica.
+4. [x] Con 15000 pts, las 6 recompensas activas (todas ≤12000 pts) aparecieron todas — consistente con el código (`RewardsList` filtra por `totalPoints >= points_cost`). No se pudo probar el caso de exclusión (recompensa más cara que el saldo) porque no hay ninguna recompensa cargada por encima de 15000 — **gap de datos, no de código**.
+5. [x] "Canjear" en "Café gratis" → modal con nombre, código de 6 dígitos, cronómetro arrancando en 14:57-15:00 — OK.
+6. [ ] No probado — requiere esperar ~14 minutos en tiempo real hasta que el cronómetro llegue a <60s. Queda pendiente.
+7. [x] Implícito: cada vez que se tocó "Canjear" (incluso para la misma recompensa en sesiones distintas) se generó un código nuevo — OK.
+8. [ ] No probado — no había ninguna recompensa con `stock = 0` cargada.
+9. [ ] No probado — mismo motivo que el ítem 4, no se pudo bajar el saldo por debajo del costo de todas las recompensas.
+10. [x] Historial mostró "Consumo en Isidoro" con `+15000 pts` en dorado — formato y color correctos. No se vieron los otros 3 tipos de movimiento (canje, ajuste manual, vencimiento) en esta sesión, pero se generaron canjes después (ver Flujo 7) — quedó `-500` y `-1500` en el historial, no se re-verificó visualmente el color gris tras esos canjes.
+11. [ ] No aplica — la cuenta de prueba ya tenía movimientos antes de llegar a este punto.
 
-1. [ ] Loguearse con Cliente C (con puntos suficientes) y entrar a `/perfil`.
-2. [ ] Verificar que el QR personal se renderiza (SVG) — si `qr_token` fuera null, debería verse un placeholder gris "QR no disponible" (caso borde, no debería pasar en un cliente normal).
-3. [ ] Verificar el mensaje motivacional bajo el puntaje: `<80 pts` → "Te faltan N puntos para tu primer canje"; `80–199 pts` → "Ya podés canjear tu primera recompensa"; `≥200 pts` → "¡Podés canjear varias recompensas!". **Nota:** estos umbrales son fijos en el código, no están atados al costo real de las recompensas — no marcar como bug si no coincide exactamente con el costo de una recompensa puntual.
-4. [ ] Verificar que la sección de recompensas **solo muestra las que el cliente puede pagar** con su saldo actual — una recompensa más cara que el saldo no debe aparecer ni siquiera deshabilitada.
-5. [ ] Tocar "Canjear" en una recompensa → **esperado:** aparece un modal a pantalla completa con el nombre de la recompensa, un código de 6 dígitos, y un cronómetro `MM:SS` regresivo arrancando en 15:00.
-6. [ ] Dejar el modal abierto sin recargar la página hasta que el cronómetro llegue a 0 → **esperado:** el cronómetro cambia a rojo cuando quedan <60s, y al llegar a 0 el mensaje cambia a "Código vencido — generá uno nuevo" con los dígitos en rojo.
-7. [ ] Cerrar el modal ("Cerrar") y volver a intentar canjear la misma recompensa → **esperado:** genera un código nuevo.
-8. [ ] Intentar canjear una recompensa con `stock = 0` (si hay una cargada para test) → **esperado:** redirect a `/perfil?canje_error=out_of_stock`, banner rojo "Sin stock disponible para esta recompensa".
-9. [ ] Si hay forma de dejar el saldo justo por debajo del costo de todas las recompensas visibles (edge case) → **esperado según código:** el error `insufficient_points` no tendría dónde renderizarse porque la lista de recompensas desaparece entera si `affordableRewards` queda vacío. Si se puede reproducir, confirmar que el mensaje de error efectivamente no se ve (gap conocido, no bloqueante pero vale documentarlo).
-10. [ ] Revisar el historial de movimientos (`TransactionHistory`) → **esperado:** hasta 20 movimientos, etiquetados como "Consumo en Isidoro" / "Canje de recompensa" / "Ajuste manual" / "Puntos vencidos" según corresponda, con signo y color acordes (positivo = dorado, negativo = gris, vencimiento = rojo).
-11. [ ] Con un cliente sin movimientos → **esperado:** "Todavía no tenés movimientos. ¡Empezá acumulando puntos en tu próxima visita!"
+**Bug encontrado y corregido en este flujo → ver Flujo 7, ítem 2 y DEC-026 en `DECISIONS.md`.**
 
 ---
 
 ## CAJERO
 
-### 6. Registrar consumo (`/caja`)
+### 6. Registrar consumo (`/caja`) — ✅ Verificado 26 jul 2026
 
-1. [ ] Loguearse como cajero (o admin) y entrar a `/caja`.
-2. [ ] Buscar un cliente por **nombre parcial** → **esperado:** encuentra el primer cliente cuyo nombre contiene el texto (case-insensitive).
-3. [ ] Buscar por **QR token exacto** (pegar el valor de `qr_token`, no el nombre) → **esperado:** matchea exacto antes que la búsqueda por nombre.
-4. [ ] Buscar algo que no existe → **esperado:** "Cliente no encontrado — Verificá el QR o el nombre ingresado".
-5. [ ] Con un cliente encontrado, verificar que se muestra su nombre, teléfono (si tiene) y saldo de puntos actual.
-6. [ ] Cargar un monto (ej. `15000`) → **esperado:** preview en vivo de puntos a acreditar (`Math.floor(monto * points_per_peso)`), actualizado en tiempo real mientras se escribe.
-7. [ ] Dejar el monto vacío o en 0 → **esperado:** el botón "Registrar consumo" queda deshabilitado.
-8. [ ] Agregar una nota opcional (ej. "Mesa 5") y confirmar → **esperado:** redirect a `/caja` con banner de éxito "Consumo registrado — <Cliente> recibió +N pts".
-9. [ ] Verificar en `/perfil` del cliente afectado (o en `/admin/clientes/[id]`) que el saldo y el historial reflejan el consumo recién cargado.
+1. [x] Se usó la sesión admin (permite `/caja` "para testing").
+2. [x] Búsqueda por nombre parcial ("qa cliente") → encontró "QA Cliente Test" — OK.
+3. [x] Búsqueda por QR token exacto → matcheó exacto — OK.
+4. [x] Búsqueda de algo inexistente → "Cliente no encontrado — Verificá el QR o el nombre ingresado" — OK, texto exacto.
+5. [x] Card mostró nombre, teléfono y saldo (0 antes, 15000 después) — OK.
+6. [x] Cargar `15000` → preview en vivo `+15000 pts` (1:1, `points_per_peso`) — OK.
+7. [x] Monto vacío → botón "Registrar consumo" deshabilitado — OK.
+8. [x] Nota "QA - prueba Flujo 6" + confirmar → banner "Consumo registrado — QA Cliente Test recibió +15000 pts" — texto exacto, OK.
+9. [x] Confirmado por la búsqueda posterior (saldo pasó de 0 a 15000 pts) — se re-verificará también desde `/perfil` en Flujo 5.
 
-### 7. Confirmar canje (`/caja/canje`)
+**Datos de prueba creados para el resto del QA:** cliente `QA Cliente Test` (email `qa.cliente.test@isidoro-qa.dev`, creado vía Admin API con `email_confirm:true` para no depender de inbox real; dni/phone/city seteados directo en `profiles` para saltar el gate de completar-perfil, ya verificado en Flujo 3) con 15.000 pts acreditados por este consumo de prueba.
 
-1. [ ] Desde `/caja`, ir a la pestaña "Canje".
-2. [ ] Generar un código de canje válido desde el perfil de un cliente (paso previo, ver sección 5) y cargarlo dígito por dígito → **esperado:** el foco salta automáticamente al siguiente casillero al tipear, y al completar el 6to dígito se envía solo (sin tocar ningún botón).
-3. [ ] Pegar (Ctrl+V) un código de 6 dígitos copiado → **esperado:** se distribuye automáticamente en los 6 casilleros.
-4. [ ] Confirmar un código válido y no vencido → **esperado:** redirect con success — nombre de la recompensa, puntos usados, saldo nuevo del cliente.
-5. [ ] Probar un código de formato inválido (menos de 6 dígitos, letras) → **esperado:** "Código inválido — solo 6 dígitos numéricos" (o el submit ni se dispara si falta algún dígito).
-6. [ ] Probar un código que no existe → **esperado:** "Código no encontrado — verificá los dígitos".
-7. [ ] Dejar pasar 15+ minutos desde que se generó un código y confirmarlo → **esperado:** "Código vencido — el cliente debe generar uno nuevo desde su perfil".
-8. [ ] Confirmar el mismo código dos veces seguidas (después de un canje exitoso) → **esperado:** la segunda vez da "Código no encontrado" (ya no está `pending`).
-9. [ ] Verificar que el saldo y stock de la recompensa se actualizaron correctamente tras el canje (FIFO de puntos, stock decrementado si la recompensa tiene stock limitado).
+### 7. Confirmar canje (`/caja/canje`) — ✅ Verificado 26 jul 2026, 1 bug encontrado y corregido
+
+1. [x] Se usó la sesión admin (acceso "para testing" a `/caja`), pestaña "Canje".
+2. [x] **🔴→✅ Bug real encontrado y corregido (ver DEC-026):** el auto-submit al completar el 6to dígito enviaba SIEMPRE un código incompleto por una condición de carrera (`requestSubmit()` síncrono antes de que React actualizara el hidden input del último dígito) — rompía la función principal de este flujo para cualquier cajero que tipeara el código. Aislado con un caso de control (mismo código, confirmado a mano con el botón, funcionó) que probó que no era el código sino el timing. Fix: mover el auto-submit a un `useEffect` que corre después del commit de React. Reverificado con 2 códigos reales generados en vivo — el foco salta correctamente entre casilleros y el auto-submit ahora funciona.
+3. [ ] No probado en vivo (el pegado sintético vía automatización no dispara `ClipboardEvent` de forma confiable) — revisado por código: `handlePaste` limpia no-dígitos, distribuye por índice y mueve el foco al último dígito pegado. Lógica correcta, misma familia de bug que el ítem 2 no aplica acá porque `handlePaste` no llama a `requestSubmit()`.
+4. [x] Código válido → "Canje confirmado", nombre de recompensa, puntos usados y saldo nuevo — verificado 2 veces (Café gratis: -500/14500; Postre de cortesía: -1500/13000).
+5. [x] Con el form vacío el botón queda deshabilitado (no se dispara submit) — confirmado. El mensaje de formato inválido se vio en vivo varias veces mientras se aislaba el bug del ítem 2 — texto exacto "Código inválido — solo 6 dígitos numéricos".
+6. [x] Código inexistente (`000001`) → "Código no encontrado — verificá los dígitos" — texto exacto.
+7. [ ] No probado — requiere esperar 15+ minutos reales.
+8. [x] Reutilizar un código ya confirmado → "Código no encontrado — verificá los dígitos" (mismo mensaje que un código inexistente, ya no está `pending`) — OK.
+9. [x] Confirmado indirectamente: el saldo del cliente bajó correctamente en cada canje (15000→14500→13000, coincide con -500 y -1500). No se probó stock limitado (ninguna recompensa de test tiene stock).
 
 ### 8. División de cuenta (`/caja/division`)
 
