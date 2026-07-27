@@ -171,28 +171,28 @@
 5. [x] **Aprovechado en vivo, sin simular hora:** se editaron los horarios de "QA Oferta Normal" a `23:30`–`00:30` (cruza medianoche) justo antes de medianoche real — se activó correctamente en `/carta` con badge "AHORA", precio con descuento tachado y puntos calculados sobre el precio con descuento. Confirma a la vez el punto 10 de la sección Carta (ya verificado por código) y el punto 9 de la misma sección (antes pendiente por falta de datos).
 6. [x] Eliminada "QA Oferta Normal" → no desapareció, pasó a "Inactiva" — OK. Limpiada después directo por API (service role) para no dejar basura de prueba.
 
-### 13. Clientes (`/admin/clientes`) + ajuste de puntos
+### 13. Clientes (`/admin/clientes`) + ajuste de puntos — ✅ Verificado 26 jul 2026
 
-1. [ ] Entrar a `/admin/clientes` sin filtro → lista de todos los clientes (rol `cliente`) con su saldo de puntos (o "Sin puntos" si no tiene fila en `points_balance`).
-2. [ ] Buscar por **nombre parcial** → filtra correctamente.
-3. [ ] Buscar por **teléfono parcial** → también filtra (aunque el placeholder dice "nombre o email").
-4. [ ] **Caso a verificar (gap conocido de copy, no de lógica):** buscar por un fragmento de **email** → **esperado según código:** no encuentra nada por email, a pesar de que el placeholder del input dice "Buscar por nombre o email…". Confirmar y decidir si corregir el placeholder o ampliar la búsqueda (avisar al CTO si se decide cambiar).
-5. [ ] Entrar al detalle de un cliente (`/admin/clientes/[id]`) → verificar 3 tarjetas (puntos, visitas, gastado total) y la tabla de historial de consumos completa (sin paginar).
-6. [ ] Entrar a un `id` de cliente que no existe (URL manual) → **esperado:** página 404 de Next.js.
-7. [ ] Hacer un ajuste manual **positivo** (ej. +50 puntos) con una nota obligatoria → **esperado:** preview en vivo con `+50 pts` en verde/dorado mientras se escribe, botón habilitado solo con nota + puntos ≠ 0, y tras confirmar: banner "Actualizado correctamente" (o el que corresponda) y el saldo del cliente sube 50.
-8. [ ] Hacer un ajuste **negativo** dentro del saldo disponible (ej. cliente tiene 100, descontar -30) → **esperado:** saldo baja a 70, queda registrado en el historial como "Ajuste manual".
-9. [ ] **Fix aplicado 16 jul 2026 — verificar:** hacer un ajuste negativo **mayor al saldo disponible** (ej. cliente tiene 20 puntos, intentar descontar -100) → **esperado ahora:** el Edge Function devuelve `insufficient_points`, `adjustPoints` lo parsea (mismo mecanismo que `iniciarCanje`) y redirige a `/admin/clientes/[id]?error=insufficient_points`, mostrando el banner "Saldo insuficiente para aplicar este descuento" arriba del form — sin pantalla de error genérica ni crash.
-10. [ ] Intentar enviar el form de ajuste con puntos en `0` (o vacío) → **esperado:** el botón "Aplicar ajuste" queda deshabilitado, no se puede enviar.
-11. [ ] Cargar un número decimal (ej. `5.7`) en puntos → **esperado según código:** se trunca a `5` (parseInt), no da error ni redondea.
+1. [x] Lista de los 5 clientes con saldo de puntos — OK.
+2. [x] Búsqueda por nombre parcial ("francisco") → filtró a 1 resultado — OK.
+3. [x] Búsqueda por teléfono parcial ("1122334") → filtró a "QA Cliente Test" — OK.
+4. [x] Búsqueda por fragmento de email ("isidoro-qa", presente en el email de ambos clientes de prueba) → "Sin resultados para 'isidoro-qa'" — confirmado el gap de copy documentado, no busca por email.
+5. [x] Detalle de "QA Cliente Dos" → 3 tarjetas (puntos, visitas, gastado total) + tabla de historial — OK.
+6. [x] UUID inexistente → página 404 de Next.js — OK.
+7. [x] Ajuste +50 con nota → preview `+50 pts` en dorado mientras se escribe, banner "Actualizado correctamente.", saldo 5000→5050 — OK.
+8. [x] Ajuste -30 (dentro del saldo) → preview en rojo, saldo 5050→5020 — OK.
+9. [x] Ajuste -100000 (excede el saldo) → "Saldo insuficiente para aplicar este descuento", saldo sin cambios (5020), sin crash — el fix de DEC sigue funcionando.
+10. [x] Puntos en `0` → botón "Aplicar ajuste" deshabilitado — OK.
+11. [x] Puntos `5.7` → preview mostró `+5 pts` (truncado) antes de enviar, y al confirmar el saldo subió exactamente 5 (5020→5025), no 6 — confirma `parseInt`, no redondeo.
 
-### 14. Estadísticas (`/admin/estadisticas`)
+### 14. Estadísticas (`/admin/estadisticas`) — ✅ Verificado 26 jul 2026
 
-1. [ ] Entrar a `/admin/estadisticas` → **esperado:** carga los 5 KPIs (Facturación, Consumos, Clientes únicos, Puntos acreditados, Puntos canjeados), el gráfico de facturación diaria, tabla de top clientes y tabla de top recompensas — todo referido a los **últimos 30 días fijos** (no hay selector de fecha en la UI, confirmar que efectivamente no existe ningún control para cambiar el rango).
-2. [ ] Verificar que el header muestra el rango de fechas calculado como texto (ej. "16 de junio — 16 de julio de 2026").
-3. [ ] Con datos cargados en el período, confirmar que el gráfico de barras tiene alturas proporcionales al monto diario, con eje Y en miles (`$Nk`) y fechas en el eje X (si hay más de 10 días con datos, no todas las fechas tienen label — es esperado, no bug).
-4. [ ] Con un período sin ningún consumo (cuenta de prueba nueva, sin datos históricos — difícil de reproducir en un entorno con datos reales, opcional) → **esperado:** gráfico dice "Sin datos para el período", tablas dicen "Sin datos para el período" / "Sin canjes en el período".
-5. [ ] Confirmar que "Top clientes" y "Top recompensas" muestran como máximo 10 filas cada una (límite hardcodeado), ordenadas de mayor a menor.
-6. [ ] Simular un error de red o un token vencido (ej. probar en una pestaña donde la sesión expiró) → **esperado:** banner rojo con el mensaje de error en vez de romper la página ("No se pudo conectar con el servidor de reportes" o el código de error HTTP).
+1. [x] Los 5 KPIs, gráfico y ambas tablas cargaron. No hay ningún selector de fecha en la UI — confirmado, es de últimos 30 días fijos.
+2. [x] Header mostró "26 de junio — 27 de julio de 2026" como texto — OK.
+3. [x] Gráfico de barras con alturas proporcionales (picos correctos en 06/29, 07/01, 07/26), eje Y en `$Nk`, fechas en X sin label en todos los días — OK.
+4. [ ] No probado — difícil de reproducir con datos reales de por medio, marcado como opcional en el checklist original.
+5. [x] "Top clientes" (4 filas) y "Recompensas más canjeadas" (3 filas) — por debajo del límite de 10, no se pudo confirmar el tope exacto, pero el orden descendente por gasto/canjes es correcto en ambas.
+6. [ ] No probado — requiere simular una falla de red o token vencido, fuera de alcance de esta sesión de QA funcional.
 
 ---
 
@@ -216,11 +216,18 @@ Estos 10 puntos ya están referenciados dentro de sus secciones correspondientes
 8. Si el saldo de un cliente cae a un nivel donde no puede pagar ninguna recompensa, el banner de error de canje no tiene dónde renderizarse.
 9. El picker de productos para asociar a una oferta de horario filtra por disponibilidad al crear, pero no al editar.
 10. Categoría eliminada con productos asociados no bloquea el delete ni limpia la relación — los productos huérfanos podrían seguir apareciendo en la carta.
+11. **Nuevo, encontrado 26 jul 2026:** el gap de `deleted_at` en joins es más amplio de lo documentado en el punto 10 — también aparece en `/admin/productos` (nombre de categoría eliminada sigue mostrándose) y en el dropdown de productos para asociar a una oferta de horario (productos eliminados siguen apareciendo como opción). No bloqueante, mismo origen que el punto 10 — si se decide resolver, conviene resolverlo de una vez en los tres lugares.
 
 ---
 
 ## Al terminar el QA
 
-- [ ] Actualizar `PROJECT_STATUS.md`: cambiar "QA completo de todos los flujos" a ✅ Completado (o dejar 🔄 En progreso con notas si quedaron bugs abiertos).
-- [ ] Para cada gap confirmado como bug real (no como comportamiento aceptado), documentar en `DECISIONS.md` la decisión de corregirlo ahora o dejarlo para después, y avisar a Kevin si es un problema de backend (ej. el gap #3, que podría resolverse igual que se resolvió DEC-020 para `iniciarCanje`).
-- [ ] Mergear solo `PROJECT_STATUS.md` (y `DECISIONS.md` si aplica) a `main`, según la metodología de ramas habitual.
+- [x] `PROJECT_STATUS.md` actualizado — QA completo de todos los flujos, con notas de lo pendiente.
+- [x] Bug real encontrado (auto-submit de canje) documentado y corregido — ver DEC-026. Gaps ya conocidos (lista de arriba) quedaron confirmados/ampliados donde correspondía, ninguno nuevo bloqueante.
+- [ ] Mergear `PROJECT_STATUS.md` y `DECISIONS.md` a `main` — pendiente, se hace junto con el resto de los commits de esta sesión.
+
+**Pendientes reales que no se pudieron cerrar en esta sesión (no por bugs, por limitaciones de tiempo/entorno):**
+- Flujo 4, ítem 4 (scroll al tocar categoría del drawer): necesita confirmación manual del usuario con un click real de mouse — la automatización de este QA no pudo verificarlo de forma confiable.
+- Flujo 5, ítems 6, 8, 9 (cronómetro llegando a 0, recompensa con stock 0, saldo insuficiente para todas las recompensas): requieren esperar ~15 min reales o cargar datos de test específicos que no existían.
+- Flujo 7, ítem 7 (código vencido): mismo motivo, requiere esperar 15+ min reales.
+- Flujo 14, ítems 4 y 6 (período sin datos, error de red simulado): marcados como opcionales/difíciles de reproducir en el checklist original.
