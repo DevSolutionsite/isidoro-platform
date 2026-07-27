@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 const ERROR_MESSAGES: Record<string, string> = {
   invalid_code_format: 'Código inválido — solo 6 dígitos numéricos',
@@ -23,6 +23,21 @@ export function ConfirmarCanjeForm({ action, errorCode }: Props) {
 
   const isFull = digits.every((d) => d !== '')
   const errorMsg = errorCode ? (ERROR_MESSAGES[errorCode] ?? ERROR_MESSAGES.unknown) : null
+  const submittedRef = useRef(false)
+
+  // Auto-submit once all 6 digits are filled. Runs after React commits the
+  // digits state to the hidden inputs — calling requestSubmit() synchronously
+  // inside handleChange raced ahead of that commit and always submitted a
+  // stale/incomplete code (bug found during QA, 26 jul 2026).
+  useEffect(() => {
+    if (isFull && !submittedRef.current) {
+      submittedRef.current = true
+      formRef.current?.requestSubmit()
+    }
+    if (!isFull) {
+      submittedRef.current = false
+    }
+  }, [isFull])
 
   function handleChange(index: number, value: string) {
     const digit = value.replace(/\D/g, '').slice(-1)
@@ -32,10 +47,6 @@ export function ConfirmarCanjeForm({ action, errorCode }: Props) {
 
     if (digit && index < 5) {
       inputRefs.current[index + 1]?.focus()
-    }
-
-    if (digit && index === 5 && next.every((d) => d !== '')) {
-      formRef.current?.requestSubmit()
     }
   }
 
