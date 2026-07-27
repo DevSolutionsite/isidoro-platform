@@ -1,7 +1,7 @@
 # PROJECT_STATUS.md — Plataforma Isidoro
 > Actualizar al iniciar y cerrar cada jornada. El CTO Agent lee este archivo antes de responder cualquier pregunta.
 
-**Última actualización:** 26 de julio de 2026 — Fran (QA completo de los 14 flujos vía `docs/QA_CHECKLIST.md`; 1 bug real encontrado y corregido — auto-submit de código de canje, ver DEC-026)
+**Última actualización:** 26 de julio de 2026 — Fran (QA completo de los 14 flujos vía `docs/QA_CHECKLIST.md`; 1 bug real encontrado y corregido — auto-submit de código de canje, ver DEC-026; cargado el menú real del cliente — 140 productos, 12 categorías)
 **Estado general:** EN CURSO — Semana 4 (backend completo, frontend avanzado)
 **Semana actual:** 4 de 4
 **Riesgo de plazo:** ⚠️ Medio — DEC-023 resuelto pero fuera del flujo de migraciones (repo y DB divergen otra vez, ver Bloqueos activos); QA funcional completo, falta deploy
@@ -88,9 +88,9 @@
 **No quedan mocks pendientes de reemplazo.** Todas las vistas de cliente, cajero y admin están conectadas a datos reales.
 
 ## Pendientes del cliente (Restaurante Isidoro)
-- [ ] Fotos de todos los productos del menú
-- [ ] Nombre, descripción y precio de cada producto
-- [ ] Categorías del menú (ej: entradas, principales, postres, bebidas)
+- [ ] Fotos de todos los productos del menú (falta además que Kevin configure Supabase Storage para poder subirlas)
+- [x] Nombre, descripción y precio de cada producto — cargados 140 productos reales el 26 jul 2026, extraídos de https://monline.com.ar/Isidoro (su carta actual en otra plataforma). Reemplazó por completo los datos placeholder. Falta el precio de 1 producto ("Provoleta de la Huerta") que no estaba visible en la fuente — confirmar con el cliente y cargarlo.
+- [x] Categorías del menú — 12 categorías reales cargadas (Entradas, Entre Panes, Hamburguesas, Pizzas, Ensaladas, Platos Principales, Postres, Bebidas sin Alcohol, Coctelería, Cervezas, Vinos, Espumantes), reemplazando las 5 de prueba.
 - [ ] Datos del administrador principal (email para crear cuenta admin)
 - [ ] Dominio web contratado y apuntado
 

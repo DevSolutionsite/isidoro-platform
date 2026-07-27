@@ -275,6 +275,19 @@
 
 ---
 
+### DEC-027 — Carga del menú real del cliente (140 productos, 12 categorías)
+
+- **Decisión:** reemplazar por completo las 5 categorías / 8 productos placeholder por el menú real del Restaurante Isidoro, extraído de su carta actual publicada en https://monline.com.ar/Isidoro (link provisto directamente por Fran/el cliente).
+- **Categorías reales (orden de la fuente):** Entradas, Entre Panes, Hamburguesas, Pizzas, Ensaladas, Platos Principales, Postres, Bebidas sin Alcohol, Coctelería, Cervezas, Vinos, Espumantes.
+- **Método:** scraping de la página vía dos pasadas independientes (una para nombre+descripción, otra para verificar precios exactos), cruzadas para detectar errores. La segunda pasada reveló 2 duplicados de scraping (un vino repetido dos veces) que se descartaron al armar el listado final. Carga vía inserts directos a Supabase (service role), no a través del formulario del admin — a esa escala (140 filas) hacerlo a mano no era práctico.
+- **Excluido:** "Provoleta de la Huerta" no tenía precio visible en la fuente — no se inventó, queda pendiente que el cliente lo confirme.
+- **Sin imágenes:** la fuente no tiene fotos accesibles por scraping, y Supabase Storage todavía no está configurado (tarea de Kevin, ver Pendientes del cliente en `PROJECT_STATUS.md`). Los 140 productos quedaron sin `image_url`, mostrando el placeholder genérico como el resto de las vistas hasta ahora.
+- **Limpieza asociada:** se detectaron y borraron productos "fantasma" ya soft-deleted de sesiones de test anteriores (`a`, `b` x2, `Prueba 02-07`, `Empanadas (x4)` placeholder) que quedaban en la tabla aunque invisibles en la app — no eran de esta sesión, probablemente de pruebas previas de Kevin o Fran. También se eliminó una oferta de horario de prueba ("dexf") que bloqueaba el borrado del producto placeholder "Tiramisú" por FK.
+- **Tomada por:** Fran (Frontend Agent) — pedido directo del usuario con la URL de la carta real.
+- **Fecha:** 26 de julio de 2026
+
+---
+
 ## System Prompts de los agentes
 
 ### CTO Agent — System Prompt
