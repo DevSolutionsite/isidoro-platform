@@ -1,3 +1,6 @@
+'use client'
+
+import { useState } from 'react'
 import { formatARS } from '@/lib/utils'
 import type { ProductWithDiscount } from '@/lib/types'
 
@@ -30,13 +33,15 @@ export function ProductCard({ product, pointsPerPeso }: ProductCardProps) {
   const hasDiscount = product.discount_price != null
   const displayPrice = hasDiscount ? product.discount_price! : product.price
   const pointsEarned = Math.floor(displayPrice * pointsPerPeso)
+  const [imageFailed, setImageFailed] = useState(false)
+  const showImage = !!product.image_url && !imageFailed
 
   return (
     <article
       className={`flex gap-3 overflow-hidden rounded-xl border border-border bg-surface${unavailable ? ' opacity-60' : ''}`}
     >
       <div
-        className="flex shrink-0 items-center justify-center"
+        className="flex shrink-0 items-center justify-center overflow-hidden"
         style={{
           width: 108,
           height: 108,
@@ -44,7 +49,17 @@ export function ProductCard({ product, pointsPerPeso }: ProductCardProps) {
           borderRadius: 8,
         }}
       >
-        <ImagePlaceholder />
+        {showImage ? (
+          // eslint-disable-next-line @next/next/no-img-element -- image_url son links externos arbitrarios, sin dominio fijo para next/image
+          <img
+            src={product.image_url!}
+            alt={product.name}
+            className="h-full w-full object-cover"
+            onError={() => setImageFailed(true)}
+          />
+        ) : (
+          <ImagePlaceholder />
+        )}
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col justify-center py-3 pr-3">
