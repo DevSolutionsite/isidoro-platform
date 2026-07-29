@@ -1,3 +1,4 @@
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { AdminNav } from '@/components/admin/AdminNav'
@@ -6,8 +7,18 @@ import { IsidoroLogo } from '@/components/IsidoroLogo'
 async function logout() {
   'use server'
   const supabase = await createClient()
-  await supabase.auth.signOut()
-  redirect('/login')
+  const { error } = await supabase.auth.signOut()
+  if (error) console.error('[logout] signOut error:', error.message)
+
+  // signOut() puede fallar silenciosamente sin limpiar cookies
+  // (ver: sessionError / admin.signOut error paths en auth-js).
+  // Forzamos borrado de cookies sb-* como defensa adicional.
+  const cookieStore = await cookies()
+  cookieStore.getAll().forEach((cookie) => {
+    if (cookie.name.startsWith('sb-')) cookieStore.delete(cookie.name)
+  })
+
+  redirect('/carta')
 }
 
 export default async function AdminLayout({
