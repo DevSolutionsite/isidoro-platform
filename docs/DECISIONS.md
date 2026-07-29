@@ -262,6 +262,33 @@
 
 ---
 
+### DEC-026 — Fix: auto-submit del código de canje en `/caja/canje` siempre fallaba con "código inválido"
+
+- **Hallazgo (QA en vivo, Flujo 7):** al tipear los 6 dígitos de un código de canje válido en `ConfirmarCanjeForm.tsx`, el auto-submit al completar el 6to dígito **siempre** devolvía `invalid_code_format`, sin importar la velocidad de tipeo. Confirmado con dos códigos distintos generados en el momento (ambos rechazados vía auto-submit) — descartando que fuera un código vencido o mal generado.
+- **Causa raíz:** `handleChange` llamaba a `formRef.current?.requestSubmit()` de forma **síncrona**, en el mismo tick que `setDigits(next)`. `requestSubmit()` dispara el submit (y por lo tanto Next.js serializa el `FormData` del formulario) antes de que React re-renderice y actualice el `value` del último `<input type="hidden" name="d5">` — por lo tanto el código enviado al server quedaba siempre incompleto/desactualizado en el último dígito.
+- **Cómo se aisló:** se armó un caso de control cargando los 6 dígitos vía DOM (sin pasar por el auto-submit) y confirmando manualmente con el botón — el mismo código que fallaba por auto-submit fue aceptado sin problema, confirmando que el código era válido y el bug estaba exclusivamente en el timing del auto-submit.
+- **Fix:** se reemplazó la llamada síncrona por un `useEffect` que dispara `requestSubmit()` cuando `digits` pasa a estar completo (`isFull`), con un `ref` para evitar doble submit. Los efectos corren después de que React commitea el render, así que los hidden inputs ya reflejan el dígito final. Ver `src/components/cajero/ConfirmarCanjeForm.tsx`.
+- **Impacto:** esto rompía la función principal de "escribir el código y que se confirme solo" para **todo** cajero que tipeara el código dígito por dígito (el flujo más común) — no solo un edge case. El flujo de pegar (Ctrl+V) no está afectado porque no dispara auto-submit; requiere tocar el botón manualmente, que sí usa el estado ya commiteado.
+- **Verificado:** `tsc` limpio. Probado en vivo con 2 códigos reales generados desde `/perfil` de una cuenta de prueba — confirmados correctamente vía auto-submit después del fix (`-500 pts` y `-1500 pts`, saldos actualizados). También verificados en la misma sesión: código reutilizado → "Código no encontrado"; código inexistente → "Código no encontrado".
+- **Tomada por:** Fran (Frontend Agent) — encontrado y corregido durante la ejecución de `QA_CHECKLIST.md` Flujo 7.
+- **Fecha:** 26 de julio de 2026
+
+---
+
+### DEC-027 — Carga del menú real del cliente (140 productos, 12 categorías)
+
+- **Decisión:** reemplazar por completo las 5 categorías / 8 productos placeholder por el menú real del Restaurante Isidoro, extraído de su carta actual publicada en https://monline.com.ar/Isidoro (link provisto directamente por Fran/el cliente).
+- **Categorías reales (orden de la fuente):** Entradas, Entre Panes, Hamburguesas, Pizzas, Ensaladas, Platos Principales, Postres, Bebidas sin Alcohol, Coctelería, Cervezas, Vinos, Espumantes.
+- **Método:** scraping de la página vía dos pasadas independientes (una para nombre+descripción, otra para verificar precios exactos), cruzadas para detectar errores. La segunda pasada reveló 2 duplicados de scraping (un vino repetido dos veces) que se descartaron al armar el listado final. Carga vía inserts directos a Supabase (service role), no a través del formulario del admin — a esa escala (140 filas) hacerlo a mano no era práctico.
+- **Excluido:** "Provoleta de la Huerta" no tenía precio visible en la fuente — no se inventó, queda pendiente que el cliente lo confirme.
+- **Sin imágenes:** la fuente no tiene fotos accesibles por scraping, y Supabase Storage todavía no está configurado (tarea de Kevin, ver Pendientes del cliente en `PROJECT_STATUS.md`). Los 140 productos quedaron sin `image_url`, mostrando el placeholder genérico como el resto de las vistas hasta ahora.
+- **Limpieza asociada:** se detectaron y borraron productos "fantasma" ya soft-deleted de sesiones de test anteriores (`a`, `b` x2, `Prueba 02-07`, `Empanadas (x4)` placeholder) que quedaban en la tabla aunque invisibles en la app — no eran de esta sesión, probablemente de pruebas previas de Kevin o Fran. También se eliminó una oferta de horario de prueba ("dexf") que bloqueaba el borrado del producto placeholder "Tiramisú" por FK.
+- **Tomada por:** Fran (Frontend Agent) — pedido directo del usuario con la URL de la carta real.
+- **Fecha:** 26 de julio de 2026
+- **Corrección posterior (26 jul, mismo día):** el insert de las 12 categorías quedó duplicado — se ejecutó dos veces con ~220ms de diferencia (probablemente un reintento de red del propio `curl`), dejando 24 filas: 12 con los 140 productos reales y 12 vacías con IDs distintos. `/carta` no se vio afectada (las vacías no renderizan sección al no tener productos), pero `/admin/categorias` sí mostraba cada categoría duplicada. Detectado por Fran (usuario) al revisar el admin. Se identificaron las 12 filas sin productos por `category_id` y se borraron directo por API — las 12 con productos y sus IDs quedaron intactas. Verificado después: `/admin/categorias` muestra 12 filas únicas con los conteos correctos, `/carta` sin cambios.
+
+---
+
 ## System Prompts de los agentes
 
 ### CTO Agent — System Prompt
