@@ -289,6 +289,19 @@
 
 ---
 
+### DEC-028 — Primer deploy a producción (Vercel) + merge completo de `feature/frontend` a `main`
+
+- **Decisión:** desplegar la app a producción en Vercel (pedido directo del usuario), y como paso previo necesario, mergear `feature/frontend` completo a `main` por primera vez — hasta ahora `main` solo había recibido syncs puntuales de `docs/`, y estaba ~6600 líneas / 80 archivos atrás (le faltaba prácticamente toda la vista admin, cajero y perfil). Deployar sobre `main` tal como estaba habría dejado producción rota.
+- **URL de producción:** https://isidoro-platform.vercel.app (proyecto `isidoro-platform` en la cuenta de Vercel de Fran, org `franchos-projects-a68a206d`).
+- **Env vars cargadas en Vercel (production):** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` — mismos valores que `.env.local`.
+- **Git no conectado:** el intento de `vercel git connect` falló — la cuenta de Vercel usada no tiene autorizada la GitHub App de Vercel sobre `kevindavezac1/isidoro-platform` (repo de otra cuenta). Kevin tiene que instalar/autorizar https://github.com/apps/vercel sobre el repo para habilitar deploys automáticos en cada push. Hasta entonces, cada deploy se dispara a mano con `vercel --prod`. Ver Bloqueos activos en `PROJECT_STATUS.md`.
+- **Bug encontrado post-deploy:** el usuario reportó que la app "manda al localhost" — diagnosticado como `Site URL` de Supabase Auth todavía apuntando a `http://localhost:3000` (afecta login con Google, confirmación de email, reset de contraseña). No es un bug de código — se revisó y `GoogleAuthButton.tsx` ya usa `window.location.origin` correctamente. Es config del Dashboard de Supabase (Authentication → URL Configuration), fuera del alcance de lo que Fran puede cambiar por API — necesita acceso al Dashboard. Pasos exactos documentados en `PROJECT_STATUS.md`, Bloqueos activos.
+- **Metodología de ramas, a partir de ahora:** dado que `main` ya tiene el código completo, a partir de este punto `main` pasa a ser la rama real de producción — los merges de `feature/frontend` a `main` deberían ser de código completo (no solo docs) cada vez que haya una tanda de trabajo estable, no únicamente al final. Una vez Kevin conecte el repo, cada push a `main` va a disparar un deploy automático, así que hay que tener más cuidado de no mergear trabajo a medio terminar.
+- **Tomada por:** Fran (Frontend Agent) — pedido directo del usuario ("hacer el deploy... para poder probar todo en producción").
+- **Fecha:** 29 de julio de 2026
+
+---
+
 ## System Prompts de los agentes
 
 ### CTO Agent — System Prompt

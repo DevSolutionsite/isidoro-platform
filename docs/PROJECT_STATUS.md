@@ -1,10 +1,10 @@
 # PROJECT_STATUS.md — Plataforma Isidoro
 > Actualizar al iniciar y cerrar cada jornada. El CTO Agent lee este archivo antes de responder cualquier pregunta.
 
-**Última actualización:** 26 de julio de 2026 — Fran (QA completo de los 14 flujos vía `docs/QA_CHECKLIST.md`; 1 bug real encontrado y corregido — auto-submit de código de canje, ver DEC-026; cargado el menú real del cliente — 140 productos, 12 categorías)
-**Estado general:** EN CURSO — Semana 4 (backend completo, frontend avanzado)
+**Última actualización:** 29 de julio de 2026 — Fran (deploy a producción en Vercel — https://isidoro-platform.vercel.app; mergeado `feature/frontend` completo a `main` por primera vez, ver DEC-028)
+**Estado general:** EN CURSO — Semana 4 (backend completo, frontend avanzado, en producción)
 **Semana actual:** 4 de 4
-**Riesgo de plazo:** ⚠️ Medio — DEC-023 resuelto pero fuera del flujo de migraciones (repo y DB divergen otra vez, ver Bloqueos activos); QA funcional completo, falta deploy
+**Riesgo de plazo:** ⚠️ Medio — sitio en producción pero con 2 pendientes de config (ver Bloqueos activos): Auth de Supabase todavía apunta a localhost, y falta que Kevin autorice la GitHub App de Vercel para deploys automáticos.
 
 ---
 
@@ -71,11 +71,13 @@
 | Dashboard de estadísticas | Fran | ✅ Completado | Integrado con Edge Fn `reports` real (no mock): KPIs, gráfico de consumos por día, top clientes, top recompensas. |
 | Panel admin: búsqueda y gestión de clientes | Fran | ✅ Completado | Buscador por nombre/email (debounce URL), tabla con puntos, detalle con historial de consumos + form ajuste manual de puntos. |
 | QA completo de todos los flujos | Kevin + Fran | ✅ Completado | Los 14 flujos de `docs/QA_CHECKLIST.md` verificados el 26 jul. 1 bug real encontrado y corregido (auto-submit de canje en `/caja/canje`, ver DEC-026). Quedaron sin verificar ~8 ítems puntuales por requerir esperas reales de 15 min o datos de test específicos (cronómetro venciendo, stock 0, código vencido) — no bloqueantes, ver detalle al final de `QA_CHECKLIST.md`. Un ítem (scroll del drawer de categorías en `/carta`) necesita confirmación manual del usuario, automatización no concluyente. |
-| Deploy a producción | Kevin + Fran | ⬜ Pendiente | — |
+| Deploy a producción | Kevin + Fran | ✅ Completado | https://isidoro-platform.vercel.app — desplegado 29 jul desde `main` (ya con `feature/frontend` mergeado completo, ver DEC-028). Falta config de Auth en Supabase y conexión de GitHub para deploy automático, ver Bloqueos activos. |
 
 ---
 
-- ⚠️ **Kevin, no bloqueante pero requiere acción:** DEC-023 (`categories`/`products`/`rewards` rotas para `anon`) está resuelto a nivel de datos — verificado el 26 jul consultando la API REST directamente, ya no devuelve `permission denied`. Pero el fix **no está en ninguna migración del repo** (se aplicó otra vez directo en el Dashboard de Supabase, violando DEC-016). Falta que Kevin regularice esto con `supabase db pull` o una migración nueva que documente el `GRANT EXECUTE`, para que el repo vuelva a reflejar el estado real de la DB. Ver DEC-023 actualizado en `DECISIONS.md`.
+## Bloqueos activos
+- 🔴 **Fran/Kevin, urgente para poder usar producción de verdad:** Supabase Auth todavía tiene `Site URL` apuntando a `http://localhost:3000` — cualquier redirect que maneja Supabase (login con Google, confirmación de email, reset de contraseña) manda al usuario a localhost en vez de a producción. Fix: Dashboard de Supabase → Authentication → URL Configuration → cambiar Site URL a `https://isidoro-platform.vercel.app` y agregar `https://isidoro-platform.vercel.app/**` a Redirect URLs. No requiere cambios en Google Cloud Console (el callback de Google apunta al dominio fijo de Supabase). Ver DEC-028.
+- ⚠️ **Kevin, no bloqueante pero requerido para deploy automático:** el repo de GitHub (`kevindavezac1/isidoro-platform`) no tiene autorizada la GitHub App de Vercel, así que el proyecto de Vercel no se pudo conectar al repo — cada deploy a producción hay que dispararlo a mano (`vercel --prod`). Kevin tiene que instalar/autorizar la app de Vercel (https://github.com/apps/vercel) sobre este repo. Ver DEC-028.
 - ⚠️ **Kevin (no bloqueante):** el trigger `handle_new_user` solo lee `full_name` de `raw_user_meta_data`. `RegisterForm.tsx` ya manda `dni`, `phone` y `city` en el signup, pero esos datos se pierden porque el trigger no los captura — el usuario los reingresa una vez en `/completar-perfil`. Actualizar `supabase/migrations/20260615000001_handle_new_user.sql` (o migración nueva) para leer e insertar también esos 3 campos en `profiles` y evitar el paso duplicado. Ver DEC-019/DEC-020.
 
 ## Integración pendiente (Fran reemplaza mocks por datos reales)
