@@ -23,6 +23,19 @@ export type ProductWithCategory = Product & {
   category: Pick<Category, 'id' | 'name'>
 }
 
+export type ProductWithDiscount = Product & {
+  discount_price: number | null
+}
+
+export type PromoSlide = {
+  id: string
+  badge: string
+  title: string
+  description: string | null
+  price: number | null
+  originalPrice: number | null
+}
+
 export type TimeOfferWithProducts = TimeOffer & {
   products: Product[]
 }

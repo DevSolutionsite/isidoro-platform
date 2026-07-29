@@ -181,15 +181,18 @@ export type Database = {
           id: string
           time_offer_id: string
           product_id: string
+          price_override: number | null
         }
         Insert: {
           id?: string
           time_offer_id: string
           product_id: string
+          price_override?: number | null
         }
         Update: {
           time_offer_id?: string
           product_id?: string
+          price_override?: number | null
         }
       }
       rewards: {
