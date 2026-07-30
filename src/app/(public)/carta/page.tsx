@@ -6,6 +6,7 @@ import { slugify } from '@/lib/utils'
 import { CategoryMenu } from '@/components/carta/CategoryMenu'
 import { ProductCard } from '@/components/carta/ProductCard'
 import { PromoCarousel } from '@/components/carta/PromoCarousel'
+import { WhatsAppChannelButton } from '@/components/carta/WhatsAppChannelButton'
 import type { Promotion, ProductWithDiscount, PromoSlide } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -188,6 +189,8 @@ export default async function CartaPage() {
           )
         })}
       </main>
+
+      <WhatsAppChannelButton />
     </div>
   )
 }
