@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { AdminNav } from '@/components/admin/AdminNav'
 import { IsidoroLogo } from '@/components/IsidoroLogo'
@@ -66,7 +67,14 @@ export default async function AdminLayout({
         >
           <p className="truncate font-medium">{profile.full_name}</p>
           <p className="mt-0.5 opacity-60">Administrador</p>
-          <form action={logout} className="mt-3">
+          <Link
+            href="/carta"
+            className="mt-3 flex items-center gap-1 text-xs transition-opacity hover:opacity-70"
+            style={{ color: 'var(--brand)' }}
+          >
+            ← Ver carta
+          </Link>
+          <form action={logout} className="mt-2">
             <button
               type="submit"
               className="text-xs transition-opacity hover:opacity-70"

@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { IsidoroLogo } from '@/components/IsidoroLogo'
 
@@ -58,6 +59,16 @@ export default async function CajeroLayout({
             {profile.full_name.split(' ')[0]} ·{' '}
             <span style={{ color: 'var(--brand)' }}>Caja</span>
           </span>
+          <Link
+            href="/carta"
+            className="text-xs px-3 py-1.5 rounded-lg transition-opacity hover:opacity-70"
+            style={{
+              color: 'var(--brand)',
+              border: '1px solid var(--border)',
+            }}
+          >
+            ← Ver carta
+          </Link>
           <form action={logout}>
             <button
               type="submit"
