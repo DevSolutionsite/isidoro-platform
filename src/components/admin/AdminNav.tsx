@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: '/admin/ofertas', label: 'Ofertas por horario' },
   { href: '/admin/clientes', label: 'Clientes' },
   { href: '/admin/estadisticas', label: 'Estadísticas' },
+  { href: '/carta', label: 'Volver a la carta' },
 ]
 
 export function AdminNav() {

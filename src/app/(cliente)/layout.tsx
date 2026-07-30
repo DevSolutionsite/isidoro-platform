@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { IsidoroLogo } from '@/components/IsidoroLogo'
 
@@ -52,6 +53,13 @@ export default async function ClienteLayout({
       >
         <IsidoroLogo height={40} />
         <div className="flex items-center gap-3">
+          <Link
+            href="/carta"
+            className="text-sm font-medium transition-colors hover:opacity-70"
+            style={{ color: 'var(--brand)' }}
+          >
+            Volver a la carta
+          </Link>
           <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
             {profile.full_name.split(' ')[0]}
           </span>

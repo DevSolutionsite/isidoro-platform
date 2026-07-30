@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { PointsCard } from '@/components/perfil/PointsCard'
 import { QRDisplay } from '@/components/perfil/QRDisplay'
@@ -69,13 +70,22 @@ export default async function PerfilPage({
 
   return (
     <div className="px-4 pb-10 space-y-6 pt-6">
-      <div>
-        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          Bienvenido de vuelta
-        </p>
-        <h1 className="text-2xl font-semibold tracking-tight font-display">
-          {profile?.full_name ?? 'Cliente'}
-        </h1>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+            Bienvenido de vuelta
+          </p>
+          <h1 className="text-2xl font-semibold tracking-tight font-display">
+            {profile?.full_name ?? 'Cliente'}
+          </h1>
+        </div>
+        <Link
+          href="/perfil/editar"
+          className="mt-1 shrink-0 text-sm font-medium hover:opacity-70"
+          style={{ color: 'var(--brand)' }}
+        >
+          Editar mis datos
+        </Link>
       </div>
 
       <PointsCard points={totalPoints} />

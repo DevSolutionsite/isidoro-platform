@@ -7,11 +7,10 @@ import { createClient } from '@/lib/supabase/client'
 import { GoogleAuthButton } from './GoogleAuthButton'
 import { CityCombobox } from './CityCombobox'
 import { CIUDADES_SANTA_FE } from '@/lib/data/ciudades'
+import { DNI_REGEX, PHONE_REGEX, normalizePhone } from '@/lib/validation'
 
 const INPUT_CLS =
   'w-full rounded-lg border border-border bg-surface px-4 py-2.5 text-sm text-foreground placeholder:text-text-muted focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand transition-colors'
-
-const DNI_REGEX = /^\d{7,8}$/
 
 function mapAuthError(message: string): string {
   if (message.includes('User already registered')) return 'Ya existe una cuenta con ese email'
@@ -41,8 +40,9 @@ export function RegisterForm() {
       return
     }
 
-    if (!phone.trim()) {
-      setError('Ingresá un teléfono de contacto')
+    const normalizedPhone = normalizePhone(phone)
+    if (!PHONE_REGEX.test(normalizedPhone)) {
+      setError('El teléfono debe tener 10 dígitos')
       return
     }
 
@@ -66,7 +66,7 @@ export function RegisterForm() {
         data: {
           full_name: fullName.trim(),
           dni: dni.trim(),
-          phone: phone.trim(),
+          phone: normalizedPhone,
           city: city.trim(),
         },
       },

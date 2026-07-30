@@ -36,6 +36,13 @@ export function CajaTabs({ active }: { active: 'consumo' | 'canje' | 'division' 
       >
         División
       </Link>
+      <Link
+        href="/carta"
+        className="flex-1 py-2.5 text-sm font-semibold text-center transition-colors"
+        style={{ background: 'var(--surface)', color: 'var(--text-muted)' }}
+      >
+        Volver a la carta
+      </Link>
     </div>
   )
 }

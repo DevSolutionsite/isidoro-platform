@@ -3,28 +3,33 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { CityCombobox } from './CityCombobox'
+import { CityCombobox } from '@/components/auth/CityCombobox'
 import { CIUDADES_SANTA_FE } from '@/lib/data/ciudades'
-import { DNI_REGEX, PHONE_REGEX, normalizePhone } from '@/lib/validation'
+import { PHONE_REGEX, normalizePhone } from '@/lib/validation'
 
 const INPUT_CLS =
   'w-full rounded-lg border border-border bg-surface px-4 py-2.5 text-sm text-foreground placeholder:text-text-muted focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand transition-colors'
 
-type CompletarPerfilFormProps = {
+const DISABLED_INPUT_CLS =
+  'w-full rounded-lg border border-border bg-background px-4 py-2.5 text-sm text-text-muted cursor-not-allowed'
+
+type EditarPerfilFormProps = {
   userId: string
-  initialDni: string
+  initialFullName: string
+  dni: string
   initialPhone: string
   initialCity: string
 }
 
-export function CompletarPerfilForm({
+export function EditarPerfilForm({
   userId,
-  initialDni,
+  initialFullName,
+  dni,
   initialPhone,
   initialCity,
-}: CompletarPerfilFormProps) {
+}: EditarPerfilFormProps) {
   const router = useRouter()
-  const [dni, setDni] = useState(initialDni)
+  const [fullName, setFullName] = useState(initialFullName)
   const [phone, setPhone] = useState(initialPhone)
   const [city, setCity] = useState(initialCity)
   const [error, setError] = useState<string | null>(null)
@@ -34,8 +39,8 @@ export function CompletarPerfilForm({
     e.preventDefault()
     setError(null)
 
-    if (!DNI_REGEX.test(dni.trim())) {
-      setError('El DNI debe tener 7 u 8 dígitos, sin puntos')
+    if (!fullName.trim()) {
+      setError('Ingresá tu nombre completo')
       return
     }
 
@@ -55,7 +60,7 @@ export function CompletarPerfilForm({
     const supabase = createClient()
     const { error: updateError } = await supabase
       .from('profiles')
-      .update({ dni: dni.trim(), phone: normalizedPhone, city: city.trim() })
+      .update({ full_name: fullName.trim(), phone: normalizedPhone, city: city.trim() })
       .eq('id', userId)
 
     if (updateError) {
@@ -76,20 +81,35 @@ export function CompletarPerfilForm({
       )}
 
       <div className="flex flex-col gap-1.5">
+        <label htmlFor="fullName" className="text-sm font-medium text-foreground">
+          Nombre completo
+        </label>
+        <input
+          id="fullName"
+          type="text"
+          autoComplete="name"
+          required
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          placeholder="Juan García"
+          className={INPUT_CLS}
+        />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
         <label htmlFor="dni" className="text-sm font-medium text-foreground">
           DNI
         </label>
         <input
           id="dni"
           type="text"
-          inputMode="numeric"
-          autoComplete="off"
-          required
+          disabled
           value={dni}
-          onChange={(e) => setDni(e.target.value)}
-          placeholder="30123456"
-          className={INPUT_CLS}
+          className={DISABLED_INPUT_CLS}
         />
+        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+          El DNI no se puede editar una vez cargado
+        </span>
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -127,7 +147,7 @@ export function CompletarPerfilForm({
         disabled={loading}
         className="mt-1 w-full rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-dark disabled:opacity-60"
       >
-        {loading ? 'Guardando...' : 'Guardar y continuar'}
+        {loading ? 'Guardando...' : 'Guardar cambios'}
       </button>
     </form>
   )
