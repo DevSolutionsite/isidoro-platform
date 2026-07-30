@@ -8,6 +8,7 @@ import {
   type ClienteBusqueda,
 } from '@/lib/actions/cajero'
 import type { SplitConsumptionEntry } from '@/lib/types'
+import { EscanearQRButton } from './EscanearQRButton'
 
 const ERROR_MESSAGES: Record<string, string> = {
   insufficient_splits: 'Se necesitan al menos 2 clientes para dividir la cuenta',
@@ -110,6 +111,23 @@ export function DivisionCuentaForm({ pointsPerPeso }: Props) {
     setSearchError(null)
 
     const found = await buscarClienteParaDivision(trimmed)
+    setSearching(false)
+
+    if (!found) {
+      setSearchError('Cliente no encontrado')
+      return
+    }
+
+    addFound(found)
+  }
+
+  async function handleQrDecode(value: string) {
+    if (timerRef.current) clearTimeout(timerRef.current)
+
+    setSearching(true)
+    setSearchError(null)
+
+    const found = await buscarClienteParaDivision(value.trim())
     setSearching(false)
 
     if (!found) {
@@ -223,14 +241,7 @@ export function DivisionCuentaForm({ pointsPerPeso }: Props) {
             color: 'var(--foreground)',
           }}
         />
-        <button
-          type="submit"
-          disabled={searching || !query.trim()}
-          className="px-4 py-3 rounded-xl text-sm font-semibold transition-opacity hover:opacity-80 disabled:opacity-40"
-          style={{ background: 'var(--brand)', color: 'var(--background)' }}
-        >
-          Agregar
-        </button>
+        <EscanearQRButton onDecode={handleQrDecode} />
       </form>
 
       {searching && (

@@ -1,7 +1,7 @@
 'use client'
 
-import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useRef } from 'react'
+import { useClienteBusquedaNav } from './useClienteBusquedaNav'
 
 export function BuscarClienteInput({
   defaultValue = '',
@@ -10,21 +10,8 @@ export function BuscarClienteInput({
   defaultValue?: string
   autoFocus?: boolean
 }) {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
+  const search = useClienteBusquedaNav()
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  function search(value: string) {
-    const params = new URLSearchParams(searchParams.toString())
-    if (value) {
-      params.set('q', value)
-    } else {
-      params.delete('q')
-    }
-    params.delete('clientId')
-    router.push(`${pathname}?${params.toString()}`)
-  }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (timerRef.current) clearTimeout(timerRef.current)

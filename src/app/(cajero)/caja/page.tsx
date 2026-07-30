@@ -6,6 +6,7 @@ import { RegistrarConsumoForm } from '@/components/cajero/RegistrarConsumoForm'
 import { registrarConsumo } from '@/lib/actions/cajero'
 import { CajaTabs } from '@/components/cajero/CajaTabs'
 import { BuscarClienteInput } from '@/components/cajero/BuscarClienteInput'
+import { EscanearQRButtonCaja } from '@/components/cajero/EscanearQRButtonCaja'
 
 export const metadata: Metadata = { title: 'Caja — Isidoro' }
 
@@ -111,9 +112,19 @@ export default async function CajaPage({
         <h1 className="text-xl font-semibold font-display mb-4" style={{ color: 'var(--foreground)' }}>
           Buscar cliente
         </h1>
-        <Suspense>
-          <BuscarClienteInput defaultValue={query} autoFocus={!foundClient} />
-        </Suspense>
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <Suspense>
+              <BuscarClienteInput
+                defaultValue={foundClient ? foundClient.full_name : query}
+                autoFocus={!foundClient}
+              />
+            </Suspense>
+          </div>
+          <Suspense>
+            <EscanearQRButtonCaja />
+          </Suspense>
+        </div>
       </div>
 
       {/* Not found */}
