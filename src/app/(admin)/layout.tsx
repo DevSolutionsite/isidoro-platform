@@ -45,7 +45,7 @@ export default async function AdminLayout({
     <div className="flex min-h-screen" style={{ background: 'var(--background)' }}>
       {/* Sidebar */}
       <aside
-        className="flex flex-col w-60 shrink-0 border-r"
+        className="flex flex-col w-60 shrink-0 border-r sticky top-0 h-screen overflow-y-auto"
         style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
       >
         {/* Logo */}
@@ -57,7 +57,7 @@ export default async function AdminLayout({
         </div>
 
         {/* Nav */}
-        <AdminNav />
+        <AdminNav logout={logout} />
 
         {/* Footer */}
         <div
@@ -66,15 +66,6 @@ export default async function AdminLayout({
         >
           <p className="truncate font-medium">{profile.full_name}</p>
           <p className="mt-0.5 opacity-60">Administrador</p>
-          <form action={logout} className="mt-3">
-            <button
-              type="submit"
-              className="text-xs transition-opacity hover:opacity-70"
-              style={{ color: 'var(--text-muted)' }}
-            >
-              Cerrar sesión
-            </button>
-          </form>
         </div>
       </aside>
 

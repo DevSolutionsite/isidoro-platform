@@ -13,7 +13,7 @@ const NAV_ITEMS = [
   { href: '/carta', label: 'Volver a la carta' },
 ]
 
-export function AdminNav() {
+export function AdminNav({ logout }: { logout: () => Promise<void> }) {
   const pathname = usePathname()
 
   return (
@@ -34,6 +34,15 @@ export function AdminNav() {
           </Link>
         )
       })}
+      <form action={logout}>
+        <button
+          type="submit"
+          className="w-full flex items-center px-3 py-2.5 rounded-lg text-sm font-medium text-left transition-colors hover:opacity-70"
+          style={{ color: 'var(--text-muted)' }}
+        >
+          Cerrar sesión
+        </button>
+      </form>
     </nav>
   )
 }

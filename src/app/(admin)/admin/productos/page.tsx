@@ -1,9 +1,11 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { formatARS } from '@/lib/utils'
 import { SuccessBanner } from '@/components/admin/SuccessBanner'
 import { DeleteButton } from '@/components/admin/DeleteButton'
+import { ProductFilters } from '@/components/admin/ProductFilters'
 import { deleteProduct } from '@/lib/actions/admin-products'
 
 export const metadata: Metadata = { title: 'Productos — Admin Isidoro' }
@@ -11,18 +13,32 @@ export const metadata: Metadata = { title: 'Productos — Admin Isidoro' }
 export default async function ProductosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ success?: string }>
+  searchParams: Promise<{ success?: string; q?: string; categoria?: string }>
 }) {
-  const { success } = await searchParams
+  const { success, q, categoria } = await searchParams
+  const query = q?.trim().toLowerCase() ?? ''
+  const categoriaId = categoria ?? ''
 
   const supabase = await createClient()
-  const { data: products } = await supabase
-    .from('products')
-    .select('id, name, description, price, sort_order, is_available, category_id, categories(name)')
-    .is('deleted_at', null)
-    .order('sort_order', { ascending: true })
+  const [{ data: products }, { data: categories }] = await Promise.all([
+    supabase
+      .from('products')
+      .select('id, name, description, price, sort_order, is_available, category_id, categories(name)')
+      .is('deleted_at', null)
+      .order('sort_order', { ascending: true }),
+    supabase
+      .from('categories')
+      .select('id, name')
+      .is('deleted_at', null)
+      .order('sort_order', { ascending: true }),
+  ])
 
-  const productList = products ?? []
+  const allProducts = products ?? []
+  const productList = allProducts.filter((p) => {
+    const matchesQuery = !query || p.name.toLowerCase().includes(query)
+    const matchesCategoria = !categoriaId || p.category_id === categoriaId
+    return matchesQuery && matchesCategoria
+  })
 
   return (
     <div>
@@ -35,7 +51,7 @@ export default async function ProductosPage({
               Productos
             </h1>
             <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-              {productList.length} producto{productList.length !== 1 ? 's' : ''} en carta
+              {allProducts.length} producto{allProducts.length !== 1 ? 's' : ''} en carta
             </p>
           </div>
           <Link
@@ -45,6 +61,16 @@ export default async function ProductosPage({
           >
             + Nuevo producto
           </Link>
+        </div>
+
+        <div className="mb-4">
+          <Suspense>
+            <ProductFilters
+              categories={categories ?? []}
+              defaultQuery={q ?? ''}
+              defaultCategoria={categoria ?? ''}
+            />
+          </Suspense>
         </div>
 
         <div
@@ -134,10 +160,24 @@ export default async function ProductosPage({
 
           {productList.length === 0 && (
             <div className="px-8 py-12 text-center" style={{ color: 'var(--text-muted)' }}>
-              No hay productos.{' '}
-              <Link href="/admin/productos/nuevo" style={{ color: 'var(--brand)' }}>
-                Crear el primero
-              </Link>
+              {query || categoriaId ? (
+                <>
+                  Sin resultados
+                  {query && (
+                    <>
+                      {' '}
+                      para <strong style={{ color: 'var(--foreground)' }}>&ldquo;{q}&rdquo;</strong>
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  No hay productos.{' '}
+                  <Link href="/admin/productos/nuevo" style={{ color: 'var(--brand)' }}>
+                    Crear el primero
+                  </Link>
+                </>
+              )}
             </div>
           )}
         </div>

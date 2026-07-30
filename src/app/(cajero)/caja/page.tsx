@@ -1,17 +1,20 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
+import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { RegistrarConsumoForm } from '@/components/cajero/RegistrarConsumoForm'
 import { registrarConsumo } from '@/lib/actions/cajero'
 import { CajaTabs } from '@/components/cajero/CajaTabs'
+import { BuscarClienteInput } from '@/components/cajero/BuscarClienteInput'
 
 export const metadata: Metadata = { title: 'Caja — Isidoro' }
 
 export default async function CajaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; done?: string; pts?: string }>
+  searchParams: Promise<{ q?: string; clientId?: string; done?: string; pts?: string }>
 }) {
-  const { q, done, pts } = await searchParams
+  const { q, clientId, done, pts } = await searchParams
   const query = q?.trim() ?? ''
 
   const supabase = await createClient()
@@ -34,11 +37,20 @@ export default async function CajaPage({
     doneClient = data
   }
 
-  // Client search: exact QR match first, then fallback to name
+  // Client search: explicit selection (clientId) > exact QR match > name matches list
   let foundClient: { id: string; full_name: string; phone: string | null } | null = null
   let foundBalance: { total_points: number } | null = null
+  let matches: { id: string; full_name: string; phone: string | null }[] = []
 
-  if (query) {
+  if (clientId) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, full_name, phone')
+      .eq('id', clientId)
+      .eq('role', 'cliente')
+      .maybeSingle()
+    foundClient = data
+  } else if (query) {
     const { data: byQR } = await supabase
       .from('profiles')
       .select('id, full_name, phone')
@@ -54,19 +66,19 @@ export default async function CajaPage({
         .select('id, full_name, phone')
         .eq('role', 'cliente')
         .ilike('full_name', `%${query}%`)
-        .limit(1)
-        .maybeSingle()
-      foundClient = byName
+        .order('full_name', { ascending: true })
+        .limit(8)
+      matches = byName ?? []
     }
+  }
 
-    if (foundClient) {
-      const { data: balance } = await supabase
-        .from('points_balance')
-        .select('total_points')
-        .eq('client_id', foundClient.id)
-        .maybeSingle()
-      foundBalance = balance
-    }
+  if (foundClient) {
+    const { data: balance } = await supabase
+      .from('points_balance')
+      .select('total_points')
+      .eq('client_id', foundClient.id)
+      .maybeSingle()
+    foundBalance = balance
   }
 
   const ptsEarned = pts ? parseInt(pts, 10) : 0
@@ -99,33 +111,13 @@ export default async function CajaPage({
         <h1 className="text-xl font-semibold font-display mb-4" style={{ color: 'var(--foreground)' }}>
           Buscar cliente
         </h1>
-        <form method="GET" action="/caja" className="flex gap-2">
-          <input
-            name="q"
-            type="search"
-            defaultValue={query}
-            placeholder="Escanear QR o escribir nombre"
-            autoComplete="off"
-            autoFocus={!foundClient}
-            className="flex-1 rounded-xl px-4 py-3 text-sm outline-none"
-            style={{
-              background: 'var(--surface-alt)',
-              border: '1px solid var(--border)',
-              color: 'var(--foreground)',
-            }}
-          />
-          <button
-            type="submit"
-            className="px-4 py-3 rounded-xl text-sm font-semibold transition-opacity hover:opacity-80"
-            style={{ background: 'var(--brand)', color: 'var(--background)' }}
-          >
-            Buscar
-          </button>
-        </form>
+        <Suspense>
+          <BuscarClienteInput defaultValue={query} autoFocus={!foundClient} />
+        </Suspense>
       </div>
 
       {/* Not found */}
-      {query && !foundClient && (
+      {query && !foundClient && matches.length === 0 && (
         <div
           className="rounded-2xl px-5 py-6 text-center"
           style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
@@ -136,6 +128,37 @@ export default async function CajaPage({
           <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
             Verificá el QR o el nombre ingresado
           </p>
+        </div>
+      )}
+
+      {/* Multiple name matches: let the cashier pick the right one */}
+      {matches.length > 0 && !foundClient && (
+        <div className="space-y-2">
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+            {matches.length} coincidencia{matches.length !== 1 ? 's' : ''} — elegí el cliente
+          </p>
+          {matches.map((m) => (
+            <Link
+              key={m.id}
+              href={`/caja?q=${encodeURIComponent(query)}&clientId=${m.id}`}
+              className="flex items-center justify-between rounded-2xl px-5 py-3 transition-opacity hover:opacity-80"
+              style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+            >
+              <div>
+                <p className="font-medium text-sm" style={{ color: 'var(--foreground)' }}>
+                  {m.full_name}
+                </p>
+                {m.phone && (
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                    {m.phone}
+                  </p>
+                )}
+              </div>
+              <span className="text-xs font-medium" style={{ color: 'var(--brand)' }}>
+                Seleccionar
+              </span>
+            </Link>
+          ))}
         </div>
       )}
 
@@ -169,6 +192,15 @@ export default async function CajaPage({
                 </p>
               </div>
             </div>
+            {clientId && (
+              <Link
+                href="/caja"
+                className="mt-3 inline-block text-xs font-medium transition-opacity hover:opacity-70"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                ← Buscar otro cliente
+              </Link>
+            )}
           </div>
 
           <div className="border-t" style={{ borderColor: 'var(--border)' }} />

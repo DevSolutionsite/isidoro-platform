@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { formatARS } from '@/lib/utils'
 import {
   buscarClienteParaDivision,
@@ -31,6 +31,8 @@ export function DivisionCuentaForm({ pointsPerPeso }: Props) {
   const [query, setQuery] = useState('')
   const [searching, setSearching] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
+  const [preview, setPreview] = useState<ClienteBusqueda | null>(null)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [rows, setRows] = useState<SplitRow[]>([])
   const [totalAmount, setTotalAmount] = useState('')
@@ -54,8 +56,53 @@ export function DivisionCuentaForm({ pointsPerPeso }: Props) {
   })
   const canSubmit = rows.length >= 2 && allAmountsValid && !mismatch && !submitting
 
+  function handleQueryChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const value = e.target.value
+    setQuery(value)
+    setSearchError(null)
+
+    if (timerRef.current) clearTimeout(timerRef.current)
+
+    const trimmed = value.trim()
+    if (trimmed.length < 2) {
+      setPreview(null)
+      setSearching(false)
+      return
+    }
+
+    setSearching(true)
+    timerRef.current = setTimeout(async () => {
+      const found = await buscarClienteParaDivision(trimmed)
+      setPreview(found)
+      setSearchError(found ? null : 'Cliente no encontrado')
+      setSearching(false)
+    }, 250)
+  }
+
+  function addFound(found: ClienteBusqueda) {
+    if (timerRef.current) clearTimeout(timerRef.current)
+
+    if (rows.some((r) => r.id === found.id)) {
+      setSearchError('Ya está en la división')
+      return
+    }
+    setRows((prev) => [...prev, { ...found, amount: '' }])
+    setQuery('')
+    setPreview(null)
+    setSearchError(null)
+    setSearching(false)
+  }
+
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault()
+
+    if (timerRef.current) clearTimeout(timerRef.current)
+
+    if (preview) {
+      addFound(preview)
+      return
+    }
+
     const trimmed = query.trim()
     if (!trimmed) return
 
@@ -63,17 +110,14 @@ export function DivisionCuentaForm({ pointsPerPeso }: Props) {
     setSearchError(null)
 
     const found = await buscarClienteParaDivision(trimmed)
+    setSearching(false)
 
     if (!found) {
       setSearchError('Cliente no encontrado')
-    } else if (rows.some((r) => r.id === found.id)) {
-      setSearchError('Ya está en la división')
-    } else {
-      setRows((prev) => [...prev, { ...found, amount: '' }])
-      setQuery('')
+      return
     }
 
-    setSearching(false)
+    addFound(found)
   }
 
   function updateAmount(id: string, amount: string) {
@@ -169,7 +213,7 @@ export function DivisionCuentaForm({ pointsPerPeso }: Props) {
         <input
           type="search"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={handleQueryChange}
           placeholder="Escanear QR o escribir nombre"
           autoComplete="off"
           className="flex-1 rounded-xl px-4 py-3 text-sm outline-none"
@@ -189,10 +233,42 @@ export function DivisionCuentaForm({ pointsPerPeso }: Props) {
         </button>
       </form>
 
-      {searchError && (
+      {searching && (
+        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+          Buscando...
+        </p>
+      )}
+
+      {searchError && !searching && (
         <p className="text-sm" style={{ color: '#f87171' }}>
           {searchError}
         </p>
+      )}
+
+      {preview && !searching && (
+        <div
+          className="rounded-2xl px-5 py-4 flex items-center justify-between"
+          style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+        >
+          <div>
+            <p className="font-medium text-sm" style={{ color: 'var(--foreground)' }}>
+              {preview.full_name}
+            </p>
+            {preview.phone && (
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                {preview.phone}
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => addFound(preview)}
+            className="px-4 py-2 rounded-lg text-xs font-semibold transition-opacity hover:opacity-80"
+            style={{ background: 'var(--brand)', color: 'var(--background)' }}
+          >
+            Agregar
+          </button>
+        </div>
       )}
 
       {/* Lista de clientes agregados */}

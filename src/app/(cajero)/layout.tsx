@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { IsidoroLogo } from '@/components/IsidoroLogo'
 
@@ -54,6 +55,13 @@ export default async function CajeroLayout({
       >
         <IsidoroLogo height={38} />
         <div className="flex items-center gap-4">
+          <Link
+            href="/carta"
+            className="text-xs font-medium transition-opacity hover:opacity-70"
+            style={{ color: 'var(--brand)' }}
+          >
+            Volver a la carta
+          </Link>
           <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
             {profile.full_name.split(' ')[0]} ·{' '}
             <span style={{ color: 'var(--brand)' }}>Caja</span>
