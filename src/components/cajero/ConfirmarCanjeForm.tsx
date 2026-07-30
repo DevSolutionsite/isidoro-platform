@@ -24,6 +24,7 @@ export function ConfirmarCanjeForm({ action, errorCode }: Props) {
   const isFull = digits.every((d) => d !== '')
   const errorMsg = errorCode ? (ERROR_MESSAGES[errorCode] ?? ERROR_MESSAGES.unknown) : null
   const submittedRef = useRef(false)
+  const [submitting, setSubmitting] = useState(false)
 
   // Auto-submit once all 6 digits are filled. Runs after React commits the
   // digits state to the hidden inputs — calling requestSubmit() synchronously
@@ -38,6 +39,18 @@ export function ConfirmarCanjeForm({ action, errorCode }: Props) {
       submittedRef.current = false
     }
   }, [isFull])
+
+  // Guard against a second submit (stray tap, Enter key) firing while the
+  // first request is still in flight: it would hit an already-confirmed
+  // redemption and show "código no encontrado" even though the first
+  // request already deducted the points (bug found 30 jul 2026).
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    if (submitting) {
+      e.preventDefault()
+      return
+    }
+    setSubmitting(true)
+  }
 
   function handleChange(index: number, value: string) {
     const digit = value.replace(/\D/g, '').slice(-1)
@@ -76,7 +89,7 @@ export function ConfirmarCanjeForm({ action, errorCode }: Props) {
   }
 
   return (
-    <form ref={formRef} action={action} className="space-y-6">
+    <form ref={formRef} action={action} onSubmit={handleSubmit} className="space-y-6">
       {/* 6 hidden inputs that carry the actual form values */}
       {digits.map((d, i) => (
         <input key={i} type="hidden" name={`d${i}`} value={d} />
@@ -100,6 +113,7 @@ export function ConfirmarCanjeForm({ action, errorCode }: Props) {
               onChange={(e) => handleChange(i, e.target.value)}
               onKeyDown={(e) => handleKeyDown(i, e)}
               onPaste={handlePaste}
+              disabled={submitting}
               autoFocus={i === 0}
               className="w-12 h-14 text-center text-xl font-bold tabular-nums rounded-xl outline-none"
               style={{
@@ -128,11 +142,11 @@ export function ConfirmarCanjeForm({ action, errorCode }: Props) {
 
       <button
         type="submit"
-        disabled={!isFull}
+        disabled={!isFull || submitting}
         className="w-full rounded-xl py-3.5 text-sm font-bold tracking-wide transition-opacity hover:opacity-80 disabled:opacity-30"
         style={{ background: 'var(--brand)', color: 'var(--background)' }}
       >
-        Confirmar canje
+        {submitting ? 'Confirmando...' : 'Confirmar canje'}
       </button>
     </form>
   )
