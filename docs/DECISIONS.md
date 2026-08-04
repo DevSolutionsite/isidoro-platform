@@ -314,6 +314,19 @@
 
 ---
 
+### DEC-030 — Sistema de pedidos por WhatsApp desde `/carta`
+
+- **Decisión:** nuevo botón "Hacer un pedido" en el drawer de categorías (debajo de "Hacé tu reserva aquí") abre un modal full-screen con un wizard de 3 pasos: 1) elegir productos (buscador + lista agrupada por categoría con steppers de cantidad), 2) datos del cliente (nombre, modalidad retiro/delivery, dirección condicional, método de pago efectivo/transferencia), 3) confirmación de solo lectura con el pedido armado y botón "Enviar pedido" que abre WhatsApp con el mensaje pre-armado. Público, sin login (mismo criterio que reservas). Especificado con Fran antes de codear — brainstorming + preguntas puntuales sobre entry point (modal full-screen vs drawer vs página nueva → se eligió modal), auth (no requerida) y persistencia del carrito (se resetea al cerrar, sin localStorage).
+- **Estado:** vive 100% en memoria del componente (`useState` en `OrderModal`, sin Context API ni store global) — no se persiste nada en Supabase, no se crean filas en ninguna tabla, no requiere sesión. Al cerrar el modal se resetea todo. Si hay productos en el carrito y el usuario intenta cerrar, se pide confirmación (`window.confirm`) para evitar perder el pedido por un toque accidental.
+- **Reutilización del número de WhatsApp:** se extrajo `RESTAURANT_WHATSAPP_NUMBER` a `src/lib/constants.ts` — antes vivía hardcodeado dentro de `CategoryMenu.tsx` como parte de la URL de reserva. Ahora reserva y pedido arman cada uno su propio mensaje a partir de la misma constante, sin duplicar el número.
+- **Mensaje de WhatsApp:** función pura `buildOrderMessage` (`src/components/carta/order/buildOrderMessage.ts`) arma el texto (productos con cantidad y subtotal, total, nombre, modalidad, dirección solo si es delivery, método de pago) y `buildWhatsAppOrderUrl` arma el link `wa.me` con `encodeURIComponent`. El precio usado por línea es el mismo criterio que ya se muestra en `/carta` (`discount_price ?? price`, ver `ProductCard`).
+- **Bug encontrado y corregido durante QA en navegador:** el modal, al ser un descendiente DOM de `<header className="sticky ... z-10">` (que crea su propio stacking context), quedaba **por detrás** del botón flotante "Unite a nuestro canal" (`WhatsAppChannelButton`, `z-10`, hermano del header más adelante en el DOM) pese a tener `z-40` — el `z-index` de un descendiente no compite con elementos fuera del stacking context de su ancestro. Al tocar "Continuar" en el paso 1, el click atravesaba visualmente el modal y abría el link placeholder del canal de WhatsApp en una pestaña nueva. Fix: `OrderModal` se renderiza con `createPortal` directo a `document.body`, escapando el stacking context del header. Verificado en navegador después del fix: el flujo completo (agregar productos → completar datos → confirmar → link de WhatsApp con el mensaje correcto) funciona sin interferencia del botón del canal.
+- **Alcance:** no toca `/caja`, admin, `points_transactions`, `consumptions` ni ninguna lógica de puntos existente. Componentes nuevos en `src/components/carta/order/`: `OrderModal.tsx`, `ProductPicker.tsx`, `CustomerForm.tsx`, `OrderReview.tsx`, `buildOrderMessage.ts`. Únicos archivos existentes tocados: `CategoryMenu.tsx` (botón nuevo + reutiliza la constante) y `(public)/carta/page.tsx` (pasa `productsWithDiscount` a `CategoryMenu`).
+- **Tomada por:** Fran (Frontend Agent) — pedido directo del usuario, plan revisado y aprobado antes de codear.
+- **Fecha:** 31 de julio de 2026
+
+---
+
 ## System Prompts de los agentes
 
 ### CTO Agent — System Prompt

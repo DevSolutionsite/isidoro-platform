@@ -124,7 +124,7 @@ export default async function CartaPage() {
         style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
       >
         <div className="flex items-center justify-between px-3 py-3">
-          <CategoryMenu categories={categories ?? []} />
+          <CategoryMenu categories={categories ?? []} products={productsWithDiscount} />
 
           <div className="flex items-center justify-center">
             <IsidoroLogo height={48} />
