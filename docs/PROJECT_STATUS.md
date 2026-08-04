@@ -1,7 +1,7 @@
 # PROJECT_STATUS.md — Plataforma Isidoro
 > Actualizar al iniciar y cerrar cada jornada. El CTO Agent lee este archivo antes de responder cualquier pregunta.
 
-**Última actualización:** 31 de julio de 2026 — Fran (landing page nueva en `/` con carrusel y CTA a la carta, ver DEC-029)
+**Última actualización:** 31 de julio de 2026 — Fran (sistema de pedidos por WhatsApp desde `/carta`, ver DEC-030)
 **Estado general:** EN CURSO — Semana 4 (backend completo, frontend avanzado, en producción)
 **Semana actual:** 4 de 4
 **Riesgo de plazo:** ⚠️ Medio — sitio en producción pero con 2 pendientes de config (ver Bloqueos activos): Auth de Supabase todavía apunta a localhost, y falta que Kevin autorice la GitHub App de Vercel para deploys automáticos.
@@ -78,6 +78,7 @@
 | Módulo | Responsable | Estado | Notas |
 |---|---|---|---|
 | Landing page en `/` con carrusel y CTA a la carta | Fran | ✅ Completado | `/` ya no redirige directo a `/carta` — landing con logo, hero con carrusel auto-rotante (imágenes placeholder de Unsplash, TODO reemplazar por fotos reales del restaurante), botón "Ver la carta" y footer con 4 redes sociales. No toca carta, admin, cajero, auth ni lógica de puntos. Ver DEC-029. |
+| Sistema de pedidos por WhatsApp desde `/carta` | Fran | ✅ Completado | Botón "Hacer un pedido" en el menú hamburguesa (debajo de "Hacé tu reserva aquí") abre un modal wizard de 3 pasos: elegir productos (buscador + steppers de cantidad), datos del cliente (nombre, modalidad retiro/delivery, dirección condicional, método de pago efectivo/transferencia), y confirmación que arma el mensaje y abre WhatsApp al mismo número de reservas (`RESTAURANT_WHATSAPP_NUMBER` en `src/lib/constants.ts`, reutilizada — no duplicada). 100% client-side, sin persistencia en Supabase, no requiere login, no toca puntos/consumptions ni ningún otro módulo. Ver DEC-030. |
 
 ---
 
