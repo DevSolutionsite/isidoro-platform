@@ -302,6 +302,18 @@
 
 ---
 
+### DEC-029 — Landing page en `/` reemplaza el redirect directo a `/carta`
+
+- **Decisión:** `/` deja de redirigir directo a `/carta` y pasa a renderizar una landing page: logo, hero con carrusel auto-rotante, botón "Ver la carta" (CTA hacia `/carta`) y footer con 4 redes sociales.
+- **Razonamiento:** con el sitio ya en producción (DEC-028) y compartible como link standalone, una landing da una primera impresión de marca antes de mandar directo al catálogo — mejor que un redirect ciego.
+- **Implementación:** carrusel custom sin librería (`useState` + `setInterval`, crossfade por opacity) — consistente con que el proyecto no tiene ninguna librería de carrusel instalada (mismo criterio que `PromoCarousel`). Componentes nuevos: `src/components/home/HeroCarousel.tsx`, `src/components/home/SocialFooter.tsx`.
+- **Placeholders pendientes:** imágenes del hero son de Unsplash (TODO reemplazar por fotos reales del restaurante cuando el cliente las provea — mismo bloqueo que el resto de las imágenes de producto, ver Pendientes del cliente en `PROJECT_STATUS.md`). Links de redes sociales con el mismo patrón de constante placeholder que `WHATSAPP_CHANNEL_URL`.
+- **Alcance:** no toca `/carta`, admin, cajero, auth ni lógica de puntos — `page.tsx` de la landing no es importado por ningún otro módulo.
+- **Tomada por:** Fran (Frontend Agent)
+- **Fecha:** 31 de julio de 2026
+
+---
+
 ## System Prompts de los agentes
 
 ### CTO Agent — System Prompt

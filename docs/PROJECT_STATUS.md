@@ -1,7 +1,7 @@
 # PROJECT_STATUS.md — Plataforma Isidoro
 > Actualizar al iniciar y cerrar cada jornada. El CTO Agent lee este archivo antes de responder cualquier pregunta.
 
-**Última actualización:** 29 de julio de 2026 — Fran (deploy a producción en Vercel — https://isidoro-platform.vercel.app; mergeado `feature/frontend` completo a `main` por primera vez, ver DEC-028)
+**Última actualización:** 31 de julio de 2026 — Fran (landing page nueva en `/` con carrusel y CTA a la carta, ver DEC-029)
 **Estado general:** EN CURSO — Semana 4 (backend completo, frontend avanzado, en producción)
 **Semana actual:** 4 de 4
 **Riesgo de plazo:** ⚠️ Medio — sitio en producción pero con 2 pendientes de config (ver Bloqueos activos): Auth de Supabase todavía apunta a localhost, y falta que Kevin autorice la GitHub App de Vercel para deploys automáticos.
@@ -21,7 +21,7 @@
 | RLS base (roles: cliente, cajero, admin) | Kevin | ✅ Completado | Policies activas en todas las tablas |
 | Setup Next.js + estructura de carpetas | Kevin + Fran | ✅ Completado | Next.js 16 + Supabase clients + tipos TypeScript del schema |
 | Design system (colores, tipografía, Tailwind) | Fran | ✅ Completado | Paleta de marca (#1f352a/#ca9e69), Playfair Display + Montserrat, logo SVG cuatrifolio |
-| Layout base (nav, estructura de páginas) | Fran | ✅ Completado | Route groups (public/cliente/cajero/admin), redirect / → /carta |
+| Layout base (nav, estructura de páginas) | Fran | ✅ Completado | Route groups (public/cliente/cajero/admin). El redirect original / → /carta fue reemplazado por una landing page, ver Post-producción |
 | Carta pública con datos mock + QR estático | Fran | ✅ Completado | Mobile-first, menú hamburguesa, carrusel promos, ícono usuario, puntos por producto, precio con descuento |
 
 ### Auth (adelantado de S2, desbloqueado por Kevin en S1)
@@ -72,6 +72,12 @@
 | Panel admin: búsqueda y gestión de clientes | Fran | ✅ Completado | Buscador por nombre/email (debounce URL), tabla con puntos, detalle con historial de consumos + form ajuste manual de puntos. |
 | QA completo de todos los flujos | Kevin + Fran | ✅ Completado | Los 14 flujos de `docs/QA_CHECKLIST.md` verificados el 26 jul. 1 bug real encontrado y corregido (auto-submit de canje en `/caja/canje`, ver DEC-026). Quedaron sin verificar ~8 ítems puntuales por requerir esperas reales de 15 min o datos de test específicos (cronómetro venciendo, stock 0, código vencido) — no bloqueantes, ver detalle al final de `QA_CHECKLIST.md`. Un ítem (scroll del drawer de categorías en `/carta`) necesita confirmación manual del usuario, automatización no concluyente. |
 | Deploy a producción | Kevin + Fran | ✅ Completado | https://isidoro-platform.vercel.app — desplegado 29 jul desde `main` (ya con `feature/frontend` mergeado completo, ver DEC-028). Falta config de Auth en Supabase y conexión de GitHub para deploy automático, ver Bloqueos activos. |
+
+### Post-producción (después del primer deploy, ver DEC-028)
+
+| Módulo | Responsable | Estado | Notas |
+|---|---|---|---|
+| Landing page en `/` con carrusel y CTA a la carta | Fran | ✅ Completado | `/` ya no redirige directo a `/carta` — landing con logo, hero con carrusel auto-rotante (imágenes placeholder de Unsplash, TODO reemplazar por fotos reales del restaurante), botón "Ver la carta" y footer con 4 redes sociales. No toca carta, admin, cajero, auth ni lógica de puntos. Ver DEC-029. |
 
 ---
 
