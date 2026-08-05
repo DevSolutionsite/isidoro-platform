@@ -4,11 +4,23 @@ import type { ProductWithDiscount } from '@/lib/types'
 
 export type OrderCartLine = { productId: string; quantity: number }
 
+export type PaymentMethod = 'efectivo' | 'transferencia' | 'qr' | 'debito' | 'credito'
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  efectivo: 'Efectivo',
+  transferencia: 'Transferencia',
+  qr: 'QR',
+  debito: 'Débito',
+  credito: 'Crédito',
+}
+
+export const DELIVERY_DISABLED_PAYMENT_METHODS: PaymentMethod[] = ['debito', 'credito']
+
 export type OrderCustomerData = {
   name: string
   modality: 'retiro' | 'delivery'
   address: string
-  payment: 'efectivo' | 'transferencia'
+  payment: PaymentMethod
 }
 
 export function effectivePrice(product: ProductWithDiscount): number {
@@ -39,7 +51,7 @@ export function buildOrderMessage(
       ? [`*Modalidad:* Delivery`, `*Dirección:* ${customer.address}`]
       : [`*Modalidad:* Retiro en el local`]
 
-  const paymentLabel = customer.payment === 'efectivo' ? 'Efectivo' : 'Transferencia'
+  const paymentLabel = PAYMENT_METHOD_LABELS[customer.payment]
 
   return [
     '¡Hola! Quiero hacer un pedido 🍽️',

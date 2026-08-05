@@ -6,6 +6,7 @@ import {
   buildOrderMessage,
   buildWhatsAppOrderUrl,
   effectivePrice,
+  PAYMENT_METHOD_LABELS,
   type OrderCartLine,
   type OrderCustomerData,
 } from './buildOrderMessage'
@@ -80,7 +81,7 @@ export function OrderReview({ cart, productsById, customer, onBack, onSent }: Or
           )}
           <p>
             <span style={{ color: 'var(--text-muted)' }}>Método de pago: </span>
-            {customer.payment === 'efectivo' ? 'Efectivo' : 'Transferencia'}
+            {PAYMENT_METHOD_LABELS[customer.payment]}
           </p>
         </div>
       </div>

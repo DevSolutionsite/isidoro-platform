@@ -327,6 +327,23 @@
 
 ---
 
+### DEC-031 — Pedidos por WhatsApp: 5 métodos de pago con regla condicional por modalidad + sección admin de contenido de portada
+
+- **Decisión (método de pago):** `OrderCustomerData['payment']` pasa de 2 a 5 valores (`efectivo | transferencia | qr | debito | credito`), con un mapa de labels compartido `PAYMENT_METHOD_LABELS` (en `buildOrderMessage.ts`) usado por `CustomerForm`, `OrderReview` y el mensaje de WhatsApp — reemplaza el ternario de 2 opciones que había en los tres lugares.
+- **Layout:** el segmented control de ancho igual (adecuado para 2 opciones) se reemplaza por un grid de 2 columnas: Efectivo/Transferencia, QR (fila completa), Débito/Crédito. Débito y Crédito se agrupan a propósito en la misma fila para que el aviso de restricción aparezca una sola vez debajo de ambas, no repetido.
+- **Regla condicional:** con modalidad `delivery`, Débito y Crédito quedan con `disabled` real en el `<button>` (no solo estilo — no disparan `onClick`), `opacity-40` y sin hover, más un texto rojo debajo ("Opción válida únicamente para retiro"). Si el cliente tenía Débito o Crédito seleccionado y cambia la modalidad a Delivery, el `onClick` del botón "Delivery" resetea `payment` a `'efectivo'` en la misma actualización de estado que cambia `modality` — nunca hay un frame con un método inválido seleccionado.
+- **Verificado en navegador:** grid con las 5 opciones en Retiro (todas habilitadas), selección de Débito, cambio a Delivery (reset automático a Efectivo + Débito/Crédito grisados + aviso visible), y click en una opción deshabilitada confirmado sin efecto.
+- **Alcance:** solo `buildOrderMessage.ts`, `CustomerForm.tsx`, `OrderReview.tsx`. No toca `ProductPicker`, `OrderModal` ni nada fuera del wizard de pedidos.
+
+- **Decisión (sección admin de portada) — planificada, implementación pendiente:** nueva sección `/admin/inicio` para que el admin gestione las imágenes del hero de `/` (reemplazando los placeholders de Unsplash hardcodeados en `HeroCarousel.tsx`) y un texto libre de horarios de atención, mostrado en la landing entre el hero y el `SocialFooter`. Sin soporte de video por ahora (queda para una etapa futura).
+- **Modelo de datos:** tabla `site_content` (fila única, mismo patrón que `settings`): `hero_images text[]`, `hours_text text`. Lectura pública, escritura solo admin. Bucket de Storage `hero-images` (mismo patrón que `product-images`): público, 5MB máx, solo png/jpeg/webp, solo admin sube/edita/borra.
+- **Bloqueo de acceso encontrado:** Fran no tiene forma de ejecutar DDL (crear tablas, policies) contra el proyecto real de Supabase desde este entorno — el Supabase CLI local está logueado en una cuenta distinta a la de `devsolutions2` (org del proyecto Isidoro), sin project ref linkeado ni contraseña de DB. La carga de datos que Fran hizo antes (140 productos, DEC-027) fue vía `INSERT` por PostgREST con la service role key — eso no requiere DDL y sigue disponible, pero crear tablas/policies sí lo requiere.
+- **Resolución:** en vez de que Fran cree la tabla directo (como en DEC-027), se escribió la migración completa en `supabase/migrations/20260805190000_site_content.sql` y el usuario se la pasó a Kevin para correrla en el SQL Editor del Dashboard de Supabase. El frontend de esta sección (Server Actions, data fetch, UI admin, `HeroCarousel` dinámico, horarios en la landing) queda pendiente hasta confirmar que la migración corrió — ver PROJECT_STATUS.md.
+- **Tomada por:** Fran (Frontend Agent) — pedido directo del usuario, plan revisado y aprobado antes de codear.
+- **Fecha:** 5 de agosto de 2026
+
+---
+
 ## System Prompts de los agentes
 
 ### CTO Agent — System Prompt

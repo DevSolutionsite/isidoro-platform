@@ -1,6 +1,11 @@
 'use client'
 
-import type { OrderCustomerData } from './buildOrderMessage'
+import {
+  DELIVERY_DISABLED_PAYMENT_METHODS,
+  PAYMENT_METHOD_LABELS,
+  type OrderCustomerData,
+  type PaymentMethod,
+} from './buildOrderMessage'
 
 interface CustomerFormProps {
   customer: OrderCustomerData
@@ -16,6 +21,17 @@ export function CustomerForm({ customer, onChange, onBack, onContinue }: Custome
 
   function update<K extends keyof OrderCustomerData>(key: K, value: OrderCustomerData[K]) {
     onChange({ ...customer, [key]: value })
+  }
+
+  function handleModalityChange(modality: OrderCustomerData['modality']) {
+    const needsPaymentReset =
+      modality === 'delivery' && DELIVERY_DISABLED_PAYMENT_METHODS.includes(customer.payment)
+
+    onChange({
+      ...customer,
+      modality,
+      payment: needsPaymentReset ? 'efectivo' : customer.payment,
+    })
   }
 
   return (
@@ -52,7 +68,7 @@ export function CustomerForm({ customer, onChange, onBack, onContinue }: Custome
           <div className="flex overflow-hidden rounded-xl" style={{ border: '1px solid var(--border)' }}>
             <button
               type="button"
-              onClick={() => update('modality', 'retiro')}
+              onClick={() => handleModalityChange('retiro')}
               className="flex-1 py-2.5 text-center text-sm font-semibold transition-colors"
               style={{
                 background: customer.modality === 'retiro' ? 'var(--brand)' : 'var(--surface)',
@@ -63,7 +79,7 @@ export function CustomerForm({ customer, onChange, onBack, onContinue }: Custome
             </button>
             <button
               type="button"
-              onClick={() => update('modality', 'delivery')}
+              onClick={() => handleModalityChange('delivery')}
               className="flex-1 py-2.5 text-center text-sm font-semibold transition-colors"
               style={{
                 background: customer.modality === 'delivery' ? 'var(--brand)' : 'var(--surface)',
@@ -101,35 +117,11 @@ export function CustomerForm({ customer, onChange, onBack, onContinue }: Custome
           </div>
         )}
 
-        <div>
-          <p className="mb-1.5 text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
-            Método de pago *
-          </p>
-          <div className="flex overflow-hidden rounded-xl" style={{ border: '1px solid var(--border)' }}>
-            <button
-              type="button"
-              onClick={() => update('payment', 'efectivo')}
-              className="flex-1 py-2.5 text-center text-sm font-semibold transition-colors"
-              style={{
-                background: customer.payment === 'efectivo' ? 'var(--brand)' : 'var(--surface)',
-                color: customer.payment === 'efectivo' ? 'var(--background)' : 'var(--text-muted)',
-              }}
-            >
-              Efectivo
-            </button>
-            <button
-              type="button"
-              onClick={() => update('payment', 'transferencia')}
-              className="flex-1 py-2.5 text-center text-sm font-semibold transition-colors"
-              style={{
-                background: customer.payment === 'transferencia' ? 'var(--brand)' : 'var(--surface)',
-                color: customer.payment === 'transferencia' ? 'var(--background)' : 'var(--text-muted)',
-              }}
-            >
-              Transferencia
-            </button>
-          </div>
-        </div>
+        <PaymentMethodPicker
+          modality={customer.modality}
+          payment={customer.payment}
+          onChange={(payment) => update('payment', payment)}
+        />
       </div>
 
       <div className="flex shrink-0 gap-3 border-t px-4 py-3" style={{ borderColor: 'var(--border)' }}>
@@ -151,6 +143,60 @@ export function CustomerForm({ customer, onChange, onBack, onContinue }: Custome
           Continuar
         </button>
       </div>
+    </div>
+  )
+}
+
+function PaymentMethodPicker({
+  modality,
+  payment,
+  onChange,
+}: {
+  modality: OrderCustomerData['modality']
+  payment: PaymentMethod
+  onChange: (payment: PaymentMethod) => void
+}) {
+  const isDeliveryRestricted = modality === 'delivery'
+
+  function chip(method: PaymentMethod, extraClassName = '') {
+    const disabled = isDeliveryRestricted && DELIVERY_DISABLED_PAYMENT_METHODS.includes(method)
+    const selected = payment === method
+    return (
+      <button
+        key={method}
+        type="button"
+        disabled={disabled}
+        onClick={() => onChange(method)}
+        className={`py-2.5 text-center text-sm font-semibold transition-colors disabled:cursor-not-allowed ${extraClassName}`}
+        style={{
+          background: selected ? 'var(--brand)' : 'var(--surface)',
+          color: selected ? 'var(--background)' : 'var(--text-muted)',
+          border: '1px solid var(--border)',
+          opacity: disabled ? 0.4 : 1,
+        }}
+      >
+        {PAYMENT_METHOD_LABELS[method]}
+      </button>
+    )
+  }
+
+  return (
+    <div>
+      <p className="mb-1.5 text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
+        Método de pago *
+      </p>
+      <div className="grid grid-cols-2 overflow-hidden rounded-xl">
+        {chip('efectivo')}
+        {chip('transferencia')}
+        {chip('qr', 'col-span-2')}
+        {chip('debito')}
+        {chip('credito')}
+      </div>
+      {isDeliveryRestricted && (
+        <p className="mt-1.5 text-xs" style={{ color: '#f87171' }}>
+          Opción válida únicamente para retiro
+        </p>
+      )}
     </div>
   )
 }
