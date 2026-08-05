@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { formatARS } from '@/lib/utils'
 import type { ProductWithDiscount } from '@/lib/types'
 
@@ -43,6 +44,7 @@ export function ProductCard({ product, pointsPerPeso }: ProductCardProps) {
       <div
         className="flex shrink-0 items-center justify-center overflow-hidden"
         style={{
+          position: 'relative',
           width: 108,
           height: 108,
           background: 'var(--surface-alt)',
@@ -50,11 +52,12 @@ export function ProductCard({ product, pointsPerPeso }: ProductCardProps) {
         }}
       >
         {showImage ? (
-          // eslint-disable-next-line @next/next/no-img-element -- image_url son links externos arbitrarios, sin dominio fijo para next/image
-          <img
+          <Image
             src={product.image_url!}
             alt={product.name}
-            className="h-full w-full object-cover"
+            fill
+            sizes="108px"
+            className="object-cover"
             onError={() => setImageFailed(true)}
           />
         ) : (

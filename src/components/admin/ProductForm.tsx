@@ -1,16 +1,20 @@
 'use client'
 
-import { useRef } from 'react'
+import { useActionState, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { formatARS } from '@/lib/utils'
 import type { Product, Category } from '@/lib/types'
+import type { ProductActionState } from '@/lib/actions/admin-products'
 
 interface ProductFormProps {
   product?: Product
   categories: Pick<Category, 'id' | 'name'>[]
-  action: (formData: FormData) => Promise<void>
+  action: (prevState: ProductActionState, formData: FormData) => Promise<ProductActionState>
   mode: 'create' | 'edit'
 }
+
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+const ACCEPTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp']
 
 const inputClass = 'w-full rounded-lg px-3 py-2 text-sm outline-none transition-colors'
 const inputStyle = {
@@ -23,9 +27,53 @@ const labelStyle = { color: 'var(--text-muted)' }
 
 export function ProductForm({ product, categories, action, mode }: ProductFormProps) {
   const formRef = useRef<HTMLFormElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [state, formAction, pending] = useActionState<ProductActionState, FormData>(action, {})
+  const [fileError, setFileError] = useState<string | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(product?.image_url ?? null)
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl && previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl)
+      }
+    }
+  }, [previewUrl])
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+      setFileError('Formato no soportado. Usá PNG, JPEG o WebP.')
+      e.target.value = ''
+      return
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      setFileError('La imagen supera el límite de 5MB.')
+      e.target.value = ''
+      return
+    }
+
+    setFileError(null)
+    if (previewUrl && previewUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(previewUrl)
+    }
+    setPreviewUrl(URL.createObjectURL(file))
+  }
+
+  const displayError = fileError ?? state.error
 
   return (
-    <form ref={formRef} action={action} className="space-y-5 max-w-lg">
+    <form ref={formRef} action={formAction} className="space-y-5 max-w-lg">
+      {displayError && (
+        <div
+          className="rounded-lg px-3 py-2 text-sm"
+          style={{ background: 'rgba(220,38,38,0.1)', color: '#dc2626', border: '1px solid rgba(220,38,38,0.3)' }}
+        >
+          {displayError}
+        </div>
+      )}
       {/* Nombre */}
       <div>
         <label htmlFor="name" className={labelClass} style={labelStyle}>
@@ -121,22 +169,33 @@ export function ProductForm({ product, categories, action, mode }: ProductFormPr
         />
       </div>
 
-      {/* URL de imagen */}
+      {/* Imagen */}
       <div>
-        <label htmlFor="image_url" className={labelClass} style={labelStyle}>
-          URL de imagen
+        <label htmlFor="image_file" className={labelClass} style={labelStyle}>
+          Imagen
         </label>
+        <input type="hidden" name="current_image_url" value={product?.image_url ?? ''} />
+        {previewUrl && (
+          // eslint-disable-next-line @next/next/no-img-element -- preview de blob: local o URL existente, no pasa por el optimizador
+          <img
+            src={previewUrl}
+            alt=""
+            className="mb-2 rounded-lg object-cover"
+            style={{ height: 108, width: 108, border: '1px solid var(--border)' }}
+          />
+        )}
         <input
-          id="image_url"
-          name="image_url"
-          type="url"
-          defaultValue={product?.image_url ?? ''}
-          placeholder="https://... (opcional)"
+          ref={fileInputRef}
+          id="image_file"
+          name="image_file"
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          onChange={handleFileChange}
           className={inputClass}
           style={inputStyle}
         />
         <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
-          Pendiente: Kevin debe configurar Supabase Storage para subida de imágenes.
+          PNG, JPEG o WebP — máximo 5MB.
         </p>
       </div>
 
@@ -158,10 +217,11 @@ export function ProductForm({ product, categories, action, mode }: ProductFormPr
       <div className="flex items-center gap-3 pt-2">
         <button
           type="submit"
-          className="px-5 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-80"
+          disabled={pending}
+          className="px-5 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
           style={{ background: 'var(--brand)', color: 'var(--background)' }}
         >
-          {mode === 'create' ? 'Crear producto' : 'Guardar cambios'}
+          {pending ? 'Guardando...' : mode === 'create' ? 'Crear producto' : 'Guardar cambios'}
         </button>
         <Link
           href="/admin/productos"

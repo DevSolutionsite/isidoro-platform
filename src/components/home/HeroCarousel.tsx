@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 
 // TODO: reemplazar con fotos reales de Isidoro (plato/ambiente del restaurante)
 const HERO_SLIDES = [
@@ -12,29 +13,46 @@ const HERO_SLIDES = [
 
 const ROTATE_MS = 5000
 
+function markShown(prev: Set<number>, i: number): Set<number> {
+  return prev.has(i) ? prev : new Set(prev).add(i)
+}
+
 export function HeroCarousel() {
   const [index, setIndex] = useState(0)
+  const [shownIndices, setShownIndices] = useState<Set<number>>(() => new Set([0]))
+
+  const goTo = (i: number) => {
+    setIndex(i)
+    setShownIndices((prev) => markShown(prev, i))
+  }
 
   useEffect(() => {
     const id = setInterval(() => {
-      setIndex((i) => (i + 1) % HERO_SLIDES.length)
+      setIndex((i) => {
+        const next = (i + 1) % HERO_SLIDES.length
+        setShownIndices((prev) => markShown(prev, next))
+        return next
+      })
     }, ROTATE_MS)
     return () => clearInterval(id)
   }, [])
 
   return (
     <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
-      {HERO_SLIDES.map((src, i) => (
-        // eslint-disable-next-line @next/next/no-img-element -- placeholders externos temporales, sin next/image por no whitelistear un host que se va a reemplazar
-        <img
-          key={src}
-          src={src}
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover transition-opacity duration-1000 ease-in-out"
-          style={{ opacity: i === index ? 1 : 0 }}
-          loading={i === 0 ? 'eager' : 'lazy'}
-        />
-      ))}
+      {HERO_SLIDES.map((src, i) =>
+        shownIndices.has(i) ? (
+          <Image
+            key={src}
+            src={src}
+            alt=""
+            fill
+            sizes="100vw"
+            priority={i === 0}
+            className="object-cover transition-opacity duration-1000 ease-in-out"
+            style={{ opacity: i === index ? 1 : 0 }}
+          />
+        ) : null
+      )}
 
       {/* Oscurecido para legibilidad del contenido encima */}
       <div
@@ -52,7 +70,7 @@ export function HeroCarousel() {
             key={src}
             type="button"
             aria-label={`Ir a la imagen ${i + 1}`}
-            onClick={() => setIndex(i)}
+            onClick={() => goTo(i)}
             className="h-1.5 rounded-full transition-all"
             style={{
               width: i === index ? 20 : 6,
