@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { confirmarCanje } from '@/lib/actions/cajero'
 import { ConfirmarCanjeForm } from '@/components/cajero/ConfirmarCanjeForm'
 import { CajaTabs } from '@/components/cajero/CajaTabs'
@@ -69,7 +70,7 @@ export default async function CanjePage({
             </div>
           </div>
 
-          <a
+          <Link
             href="/caja/canje"
             className="block w-full rounded-xl py-3.5 text-sm font-semibold text-center transition-opacity hover:opacity-80"
             style={{
@@ -79,7 +80,7 @@ export default async function CanjePage({
             }}
           >
             Confirmar otro canje
-          </a>
+          </Link>
         </div>
       ) : (
         <div className="space-y-4">

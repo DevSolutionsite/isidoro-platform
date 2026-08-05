@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
+import { getCachedSettings } from '@/lib/data/settings'
 import { RegistrarConsumoForm } from '@/components/cajero/RegistrarConsumoForm'
 import { registrarConsumo } from '@/lib/actions/cajero'
 import { CajaTabs } from '@/components/cajero/CajaTabs'
@@ -20,11 +21,7 @@ export default async function CajaPage({
 
   const supabase = await createClient()
 
-  const { data: settings } = await supabase
-    .from('settings')
-    .select('points_per_peso')
-    .single()
-
+  const settings = await getCachedSettings()
   const pointsPerPeso = settings?.points_per_peso ?? 1
 
   // Done client lookup for success banner
