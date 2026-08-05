@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getCachedCategories } from '@/lib/data/categories'
 import { ProductForm } from '@/components/admin/ProductForm'
 import { updateProduct } from '@/lib/actions/admin-products'
 
@@ -15,13 +16,9 @@ export default async function EditarProductoPage({
   const { id } = await params
   const supabase = await createClient()
 
-  const [{ data: product }, { data: categories }] = await Promise.all([
+  const [{ data: product }, categories] = await Promise.all([
     supabase.from('products').select('*').eq('id', id).single(),
-    supabase
-      .from('categories')
-      .select('id, name')
-      .is('deleted_at', null)
-      .order('sort_order', { ascending: true }),
+    getCachedCategories(),
   ])
 
   if (!product) notFound()

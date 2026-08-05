@@ -28,7 +28,7 @@ export default async function EstadisticasPage() {
   try {
     const res = await fetch(url.toString(), {
       headers: { Authorization: `Bearer ${session?.access_token ?? ''}` },
-      cache: 'no-store',
+      next: { revalidate: 60 },
     })
     if (res.ok) {
       report = (await res.json()) as ReportsResponse

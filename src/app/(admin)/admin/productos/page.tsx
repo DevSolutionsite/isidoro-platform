@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
+import { getCachedCategories } from '@/lib/data/categories'
 import { formatARS } from '@/lib/utils'
 import { SuccessBanner } from '@/components/admin/SuccessBanner'
 import { DeleteButton } from '@/components/admin/DeleteButton'
@@ -20,17 +21,13 @@ export default async function ProductosPage({
   const categoriaId = categoria ?? ''
 
   const supabase = await createClient()
-  const [{ data: products }, { data: categories }] = await Promise.all([
+  const [{ data: products }, categories] = await Promise.all([
     supabase
       .from('products')
       .select('id, name, description, price, sort_order, is_available, category_id, categories(name)')
       .is('deleted_at', null)
       .order('sort_order', { ascending: true }),
-    supabase
-      .from('categories')
-      .select('id, name')
-      .is('deleted_at', null)
-      .order('sort_order', { ascending: true }),
+    getCachedCategories(),
   ])
 
   const allProducts = products ?? []

@@ -1,18 +1,13 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { getCachedCategories } from '@/lib/data/categories'
 import { ProductForm } from '@/components/admin/ProductForm'
 import { createProduct } from '@/lib/actions/admin-products'
 
 export const metadata: Metadata = { title: 'Nuevo producto — Admin Isidoro' }
 
 export default async function NuevoProductoPage() {
-  const supabase = await createClient()
-  const { data: categories } = await supabase
-    .from('categories')
-    .select('id, name')
-    .is('deleted_at', null)
-    .order('sort_order', { ascending: true })
+  const categories = await getCachedCategories()
 
   return (
     <div className="px-8 py-6">

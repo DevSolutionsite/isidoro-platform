@@ -1,6 +1,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { updateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 
 export async function createCategory(formData: FormData) {
@@ -11,6 +12,7 @@ export async function createCategory(formData: FormData) {
   const { error } = await supabase.from('categories').insert({ name, sort_order })
   if (error) throw new Error(error.message)
 
+  updateTag('categories')
   redirect('/admin/categorias?success=created')
 }
 
@@ -22,6 +24,7 @@ export async function updateCategory(id: string, formData: FormData) {
   const { error } = await supabase.from('categories').update({ name, sort_order }).eq('id', id)
   if (error) throw new Error(error.message)
 
+  updateTag('categories')
   redirect('/admin/categorias?success=updated')
 }
 
@@ -34,5 +37,6 @@ export async function deleteCategory(id: string) {
     .eq('id', id)
   if (error) throw new Error(error.message)
 
+  updateTag('categories')
   redirect('/admin/categorias?success=deleted')
 }
