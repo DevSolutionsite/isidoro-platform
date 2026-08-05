@@ -18,7 +18,7 @@ async function logout() {
     if (cookie.name.startsWith('sb-')) cookieStore.delete(cookie.name)
   })
 
-  redirect('/carta')
+  redirect('/')
 }
 
 export default async function ClienteLayout({

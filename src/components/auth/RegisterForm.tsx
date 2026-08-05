@@ -89,7 +89,9 @@ export function RegisterForm() {
     return (
       <div className="flex min-h-screen flex-col bg-background">
         <header className="border-b border-border bg-surface px-4 py-5 text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Isidoro</h1>
+          <Link href="/carta" className="text-2xl font-bold tracking-tight text-foreground">
+            Isidoro
+          </Link>
         </header>
         <div className="flex flex-1 items-center justify-center px-4 py-10">
           <div className="w-full max-w-sm text-center">
@@ -130,7 +132,9 @@ export function RegisterForm() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="border-b border-border bg-surface px-4 py-5 text-center">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Isidoro</h1>
+        <Link href="/carta" className="text-2xl font-bold tracking-tight text-foreground">
+          Isidoro
+        </Link>
       </header>
 
       <div className="flex flex-1 items-center justify-center px-4 py-10">
