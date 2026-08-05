@@ -2,19 +2,22 @@
 
 import { useState } from 'react'
 import { slugify } from '@/lib/utils'
-import type { Category } from '@/lib/types'
+import { RESTAURANT_WHATSAPP_NUMBER } from '@/lib/constants'
+import { OrderModal } from './order/OrderModal'
+import type { Category, ProductWithDiscount } from '@/lib/types'
 
 interface CategoryMenuProps {
   categories: Pick<Category, 'id' | 'name'>[]
+  products: ProductWithDiscount[]
 }
 
-const WHATSAPP_URL =
-  'https://wa.me/5493496651497?text=Hola%2C%20quiero%20hacer%20una%20reserva%20en%20Isidoro'
+const WHATSAPP_URL = `https://wa.me/${RESTAURANT_WHATSAPP_NUMBER}?text=Hola%2C%20quiero%20hacer%20una%20reserva%20en%20Isidoro`
 const MAPS_URL =
   'https://www.google.com/maps/search/?api=1&query=San+Mart%C3%ADn+y+Pueyrred%C3%B3n%2C+S3080+Esperanza%2C+Santa+Fe'
 
-export function CategoryMenu({ categories }: CategoryMenuProps) {
+export function CategoryMenu({ categories, products }: CategoryMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [isOrderOpen, setIsOrderOpen] = useState(false)
 
   function handleSelect(category: Pick<Category, 'id' | 'name'>) {
     setIsOpen(false)
@@ -145,6 +148,39 @@ export function CategoryMenu({ categories }: CategoryMenuProps) {
                 Hacé tu reserva aquí
               </a>
 
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOpen(false)
+                  setIsOrderOpen(true)
+                }}
+                className="w-full flex items-center gap-2 px-5 py-3.5 text-sm font-semibold transition-colors"
+                style={{ color: 'var(--brand)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--brand-light)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent'
+                }}
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+                  <path d="M3 6h18" />
+                  <path d="M16 10a4 4 0 0 1-8 0" />
+                </svg>
+                Hacer un pedido
+              </button>
+
               <a
                 href={MAPS_URL}
                 target="_blank"
@@ -177,6 +213,14 @@ export function CategoryMenu({ categories }: CategoryMenuProps) {
             </nav>
           </div>
         </>
+      )}
+
+      {isOrderOpen && (
+        <OrderModal
+          categories={categories}
+          products={products}
+          onClose={() => setIsOrderOpen(false)}
+        />
       )}
     </>
   )
