@@ -42,6 +42,13 @@ export function DivisionCuentaForm({ pointsPerPeso }: Props) {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [result, setResult] = useState<{ sessionId: string; rows: ResultRow[] } | null>(null)
 
+  // Guard síncrono contra doble-tap: setSubmitting(true) recién se refleja
+  // en el DOM (botón disabled) en el próximo render, así que un segundo
+  // click puede colarse antes. Sin este ref, cada invocación de
+  // handleSubmit generaría su propia idempotency key y split_consumption
+  // no tendría forma de saber que son "el mismo" intento.
+  const submittingRef = useRef(false)
+
   const sum = rows.reduce((acc, r) => {
     const n = parseFloat(r.amount)
     return acc + (isNaN(n) ? 0 : n)
@@ -156,25 +163,31 @@ export function DivisionCuentaForm({ pointsPerPeso }: Props) {
   }
 
   async function handleSubmit() {
+    if (submittingRef.current) return
+    submittingRef.current = true
     setSubmitting(true)
     setSubmitError(null)
 
-    const splits = rows.map((r) => ({ client_id: r.id, amount: parseFloat(r.amount) }))
-    const namesById = new Map(rows.map((r) => [r.id, r.full_name]))
+    try {
+      const idempotencyKey = crypto.randomUUID()
+      const splits = rows.map((r) => ({ client_id: r.id, amount: parseFloat(r.amount) }))
+      const namesById = new Map(rows.map((r) => [r.id, r.full_name]))
 
-    const res = await dividirCuenta(splits, parsedTotal ?? undefined)
+      const res = await dividirCuenta(splits, parsedTotal ?? undefined, idempotencyKey)
 
-    if (!res.ok) {
-      setSubmitError(ERROR_MESSAGES[res.code] ?? ERROR_MESSAGES.unknown)
+      if (!res.ok) {
+        setSubmitError(ERROR_MESSAGES[res.code] ?? ERROR_MESSAGES.unknown)
+        return
+      }
+
+      setResult({
+        sessionId: res.data.session_id,
+        rows: res.data.splits.map((s) => ({ ...s, full_name: namesById.get(s.client_id) ?? '—' })),
+      })
+    } finally {
+      submittingRef.current = false
       setSubmitting(false)
-      return
     }
-
-    setResult({
-      sessionId: res.data.session_id,
-      rows: res.data.splits.map((s) => ({ ...s, full_name: namesById.get(s.client_id) ?? '—' })),
-    })
-    setSubmitting(false)
   }
 
   if (result) {

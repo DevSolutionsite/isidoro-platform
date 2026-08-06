@@ -8,9 +8,10 @@ export async function registrarConsumo(clientId: string, formData: FormData) {
   const supabase = await createClient()
   const amount = parseFloat(formData.get('amount') as string)
   const notes = (formData.get('notes') as string) || undefined
+  const idempotencyKey = formData.get('idempotency_key') as string
 
   const { data, error } = await supabase.functions.invoke('register-consumption', {
-    body: { client_id: clientId, amount, notes },
+    body: { client_id: clientId, amount, notes, idempotency_key: idempotencyKey },
   })
 
   if (error) throw new Error(error.message)
@@ -94,12 +95,13 @@ export type DividirCuentaResult =
 
 export async function dividirCuenta(
   splits: { client_id: string; amount: number }[],
-  totalAmount?: number,
+  totalAmount: number | undefined,
+  idempotencyKey: string,
 ): Promise<DividirCuentaResult> {
   const supabase = await createClient()
 
   const { data, error } = await supabase.functions.invoke('split-consumption', {
-    body: { splits, total_amount: totalAmount },
+    body: { splits, total_amount: totalAmount, idempotency_key: idempotencyKey },
   })
 
   if (error) {

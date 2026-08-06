@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { formatARS } from '@/lib/utils'
 
 interface RegistrarConsumoFormProps {
@@ -11,17 +11,35 @@ interface RegistrarConsumoFormProps {
 }
 
 export function RegistrarConsumoForm({
+  clientId,
   clientName,
   pointsPerPeso,
   action,
 }: RegistrarConsumoFormProps) {
   const [amount, setAmount] = useState('')
 
+  // Se regenera con cada edición de monto o cambio de cliente — cada una
+  // representa una operación distinta. Un resubmit del MISMO valor (retry
+  // de red, doble-tap) reusa la que ya está en el hidden input sin cambios,
+  // que es justo lo que register_consumption necesita para deduplicar.
+  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID())
+
+  useEffect(() => {
+    setIdempotencyKey(crypto.randomUUID())
+  }, [clientId])
+
+  function handleAmountChange(value: string) {
+    setAmount(value.replace(/\D/g, ''))
+    setIdempotencyKey(crypto.randomUUID())
+  }
+
   const parsed = parseInt(amount, 10)
   const pts = !isNaN(parsed) && parsed > 0 ? Math.floor(parsed * pointsPerPeso) : 0
 
   return (
     <form action={action} className="space-y-5">
+      <input type="hidden" name="idempotency_key" value={idempotencyKey} />
+
       {/* Monto */}
       <div>
         <label
@@ -39,7 +57,7 @@ export function RegistrarConsumoForm({
           pattern="[0-9]*"
           required
           value={amount}
-          onChange={(e) => setAmount(e.target.value.replace(/\D/g, ''))}
+          onChange={(e) => handleAmountChange(e.target.value)}
           placeholder="Ej: 15000"
           className="w-full rounded-xl px-4 py-3 text-lg font-semibold tabular-nums outline-none transition-colors"
           style={{

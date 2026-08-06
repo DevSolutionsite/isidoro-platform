@@ -44,7 +44,12 @@ Deno.serve(async (req) => {
 
     // Validar body
     const body = await req.json()
-    const { splits, total_amount } = body
+    const { splits, total_amount, idempotency_key } = body
+
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (typeof idempotency_key !== 'string' || !UUID_RE.test(idempotency_key)) {
+      return json({ error: 'Bad request', code: 'missing_idempotency_key' }, 400)
+    }
 
     if (!Array.isArray(splits) || splits.length < 2) {
       return json({
@@ -95,17 +100,20 @@ Deno.serve(async (req) => {
     )
 
     const { data, error } = await adminClient.rpc('split_consumption', {
-      p_cashier_id: user.id,
-      p_splits:     splits,
+      p_idempotency_key: idempotency_key,
+      p_cashier_id:       user.id,
+      p_splits:           splits,
     })
 
     if (error) {
       const errorMap: Record<string, number> = {
-        unauthorized_cashier: 403,
-        insufficient_splits:  400,
-        duplicate_client_id:  400,
-        invalid_amount:       400,
-        client_not_found:     404,
+        unauthorized_cashier:     403,
+        insufficient_splits:      400,
+        duplicate_client_id:      400,
+        invalid_amount:           400,
+        client_not_found:         404,
+        idempotency_key_mismatch: 409,
+        idempotency_claim_failed: 500,
       }
       const status = errorMap[error.message] ?? 500
       return json({ error: error.message, code: error.message }, status)
