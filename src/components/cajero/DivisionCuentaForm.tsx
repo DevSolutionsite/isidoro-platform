@@ -317,11 +317,11 @@ export function DivisionCuentaForm({ pointsPerPeso }: Props) {
                 </div>
                 <div className="flex items-center gap-3">
                   <input
-                    type="number"
-                    min={1}
-                    step={1}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     value={r.amount}
-                    onChange={(e) => updateAmount(r.id, e.target.value)}
+                    onChange={(e) => updateAmount(r.id, e.target.value.replace(/\D/g, ''))}
                     placeholder="Monto (ARS)"
                     className="flex-1 rounded-lg px-3 py-2 text-sm font-semibold tabular-nums outline-none"
                     style={{
@@ -356,11 +356,11 @@ export function DivisionCuentaForm({ pointsPerPeso }: Props) {
             </label>
             <input
               id="totalAmount"
-              type="number"
-              min={1}
-              step={1}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               value={totalAmount}
-              onChange={(e) => setTotalAmount(e.target.value)}
+              onChange={(e) => setTotalAmount(e.target.value.replace(/\D/g, ''))}
               placeholder="Ej: 15000"
               className="w-full rounded-xl px-4 py-3 text-sm font-semibold tabular-nums outline-none"
               style={{

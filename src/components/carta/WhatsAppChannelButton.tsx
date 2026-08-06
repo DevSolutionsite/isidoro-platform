@@ -1,5 +1,4 @@
-// TODO: reemplazar cuando Kevin/Fran tengan el link real del canal de difusión de WhatsApp
-const WHATSAPP_CHANNEL_URL = 'PENDIENTE_LINK_CANAL'
+const WHATSAPP_CHANNEL_URL = 'https://chat.whatsapp.com/F5fje9aOYd680D0DhLwMLq'
 
 export function WhatsAppChannelButton() {
   return (

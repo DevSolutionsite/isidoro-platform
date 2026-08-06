@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 
-// TODO: reemplazar con fotos reales de Isidoro (plato/ambiente del restaurante)
-const HERO_SLIDES = [
+// Fallback si el admin todavía no cargó imágenes propias en /admin/inicio
+const FALLBACK_SLIDES = [
   'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1600&q=80',
   'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1600&q=80',
   'https://images.unsplash.com/photo-1552566626-52f8b828add9?w=1600&q=80',
@@ -17,7 +17,9 @@ function markShown(prev: Set<number>, i: number): Set<number> {
   return prev.has(i) ? prev : new Set(prev).add(i)
 }
 
-export function HeroCarousel() {
+export function HeroCarousel({ images }: { images?: string[] }) {
+  const slides = images?.length ? images : FALLBACK_SLIDES
+
   const [index, setIndex] = useState(0)
   const [shownIndices, setShownIndices] = useState<Set<number>>(() => new Set([0]))
 
@@ -29,17 +31,17 @@ export function HeroCarousel() {
   useEffect(() => {
     const id = setInterval(() => {
       setIndex((i) => {
-        const next = (i + 1) % HERO_SLIDES.length
+        const next = (i + 1) % slides.length
         setShownIndices((prev) => markShown(prev, next))
         return next
       })
     }, ROTATE_MS)
     return () => clearInterval(id)
-  }, [])
+  }, [slides.length])
 
   return (
     <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
-      {HERO_SLIDES.map((src, i) =>
+      {slides.map((src, i) =>
         shownIndices.has(i) ? (
           <Image
             key={src}
@@ -65,7 +67,7 @@ export function HeroCarousel() {
 
       {/* Indicadores */}
       <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-2">
-        {HERO_SLIDES.map((src, i) => (
+        {slides.map((src, i) => (
           <button
             key={src}
             type="button"

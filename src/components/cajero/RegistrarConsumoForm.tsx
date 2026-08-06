@@ -17,7 +17,7 @@ export function RegistrarConsumoForm({
 }: RegistrarConsumoFormProps) {
   const [amount, setAmount] = useState('')
 
-  const parsed = parseInt(amount.replace(/\D/g, ''), 10)
+  const parsed = parseInt(amount, 10)
   const pts = !isNaN(parsed) && parsed > 0 ? Math.floor(parsed * pointsPerPeso) : 0
 
   return (
@@ -34,12 +34,12 @@ export function RegistrarConsumoForm({
         <input
           id="amount"
           name="amount"
-          type="number"
-          min={1}
-          step={1}
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
           required
           value={amount}
-          onChange={(e) => setAmount(e.target.value)}
+          onChange={(e) => setAmount(e.target.value.replace(/\D/g, ''))}
           placeholder="Ej: 15000"
           className="w-full rounded-xl px-4 py-3 text-lg font-semibold tabular-nums outline-none transition-colors"
           style={{

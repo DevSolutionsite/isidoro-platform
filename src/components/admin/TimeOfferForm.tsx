@@ -55,7 +55,8 @@ export function TimeOfferForm({
   }
 
   function updatePriceOverride(productId: string, value: string) {
-    const parsed = value === '' ? null : parseFloat(value)
+    const digits = value.replace(/\D/g, '')
+    const parsed = digits === '' ? null : parseFloat(digits)
     setAssociations((prev) =>
       prev.map((a) => (a.product_id === productId ? { ...a, price_override: parsed } : a)),
     )
@@ -179,9 +180,9 @@ export function TimeOfferForm({
 
                   <div className="shrink-0 w-32">
                     <input
-                      type="number"
-                      min={0}
-                      step={1}
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={assoc.price_override ?? ''}
                       onChange={(e) => updatePriceOverride(assoc.product_id, e.target.value)}
                       placeholder="Precio oferta"

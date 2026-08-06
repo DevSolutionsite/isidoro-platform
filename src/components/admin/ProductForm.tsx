@@ -137,12 +137,15 @@ export function ProductForm({ product, categories, action, mode }: ProductFormPr
         <input
           id="price"
           name="price"
-          type="number"
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
           required
-          min={0}
-          step={1}
           defaultValue={product?.price}
           placeholder="Ej: 12500"
+          onChange={(e) => {
+            e.target.value = e.target.value.replace(/\D/g, '')
+          }}
           className={inputClass}
           style={inputStyle}
         />
@@ -161,9 +164,13 @@ export function ProductForm({ product, categories, action, mode }: ProductFormPr
         <input
           id="sort_order"
           name="sort_order"
-          type="number"
-          min={0}
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
           defaultValue={product?.sort_order ?? 0}
+          onChange={(e) => {
+            e.target.value = e.target.value.replace(/\D/g, '')
+          }}
           className={inputClass}
           style={inputStyle}
         />

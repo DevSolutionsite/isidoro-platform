@@ -2,6 +2,8 @@ const MESSAGES: Record<string, string> = {
   created: 'Creado correctamente.',
   updated: 'Actualizado correctamente.',
   deleted: 'Eliminado correctamente.',
+  added: 'Agregado correctamente.',
+  removed: 'Quitado correctamente.',
 }
 
 interface SuccessBannerProps {

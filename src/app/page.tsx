@@ -3,12 +3,15 @@ import Link from 'next/link'
 import { IsidoroLogo } from '@/components/IsidoroLogo'
 import { HeroCarousel } from '@/components/home/HeroCarousel'
 import { SocialFooter } from '@/components/home/SocialFooter'
+import { getCachedSiteContent } from '@/lib/data/site-content'
 
 export const metadata: Metadata = {
   title: 'Isidoro — Bienvenido',
 }
 
-export default function Home() {
+export default async function Home() {
+  const siteContent = await getCachedSiteContent()
+
   return (
     <div className="flex min-h-screen flex-col" style={{ background: 'var(--background)' }}>
       <header className="flex items-center justify-center py-6">
@@ -16,7 +19,7 @@ export default function Home() {
       </header>
 
       <main className="relative flex h-[70vh] min-h-[420px] flex-1 items-end justify-center overflow-hidden md:h-screen md:items-center">
-        <HeroCarousel />
+        <HeroCarousel images={siteContent?.hero_images} />
 
         <div className="relative z-10 flex flex-col items-center gap-6 px-6 pb-16 text-center md:pb-0">
           <h1
@@ -35,6 +38,17 @@ export default function Home() {
           </Link>
         </div>
       </main>
+
+      {siteContent?.hours_text && (
+        <div className="px-6 py-8 text-center">
+          <p
+            className="mx-auto max-w-md whitespace-pre-line text-sm leading-relaxed"
+            style={{ color: 'var(--text-muted)' }}
+          >
+            {siteContent.hours_text}
+          </p>
+        </div>
+      )}
 
       <SocialFooter />
     </div>

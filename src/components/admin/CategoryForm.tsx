@@ -46,9 +46,13 @@ export function CategoryForm({ category, action, mode }: CategoryFormProps) {
         <input
           id="sort_order"
           name="sort_order"
-          type="number"
-          min={0}
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
           defaultValue={category?.sort_order ?? 0}
+          onChange={(e) => {
+            e.target.value = e.target.value.replace(/\D/g, '')
+          }}
           className={inputClass}
           style={inputStyle}
         />
