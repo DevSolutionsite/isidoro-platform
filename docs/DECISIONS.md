@@ -344,6 +344,15 @@
 
 ---
 
+### DEC-032 — Expiración del código de canje: 5 minutos (supersede DEC-011)
+- **Decisión:** El código de canje pasa de expirar a los 15 minutos a expirar a los 5. Se calcula como `now() + 5 * 60 * 1000` ms en la Edge Function `initiate-redemption` al crear la fila en `redemptions`; el `DEFAULT` de la columna `expires_at` se actualiza igual por consistencia, aunque el insert siempre manda el valor explícito.
+- **Razonamiento:** surgió de la auditoría de seguridad del sistema de puntos (hallazgo E) — 15 minutos daba una ventana de uso indebido más larga de la necesaria si el código es capturado o compartido. 5 minutos sigue siendo margen suficiente para que el cliente le muestre el código al cajero, y de paso reduce (aunque ya era baja) la probabilidad de colisión del índice único parcial de `redemptions.code` del hallazgo C, al acortar la ventana de códigos `pending` simultáneos.
+- **Implicación para Kevin:** redeploy de `initiate-redemption` + aplicar la migración `20260806220018_redemption_code_expiry_5min.sql`. No afecta el frontend — `CodigoCanjeCard.tsx` calcula el countdown dinámicamente desde el `expires_at` que devuelve el server, no tiene el valor hardcodeado.
+- **Tomada por:** Fran (Frontend Agent), a pedido del usuario tras confirmar que 5 minutos alcanza para el flujo real de mostrador.
+- **Fecha:** 6 de agosto de 2026
+
+---
+
 ## System Prompts de los agentes
 
 ### CTO Agent — System Prompt

@@ -16,6 +16,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   invalid_amount: 'Uno de los montos ingresados no es válido',
   duplicate_client_id: 'Hay un cliente repetido en la división',
   amount_mismatch: 'La suma de los montos no coincide con el total de la mesa',
+  missing_total_amount: 'Ingresá el monto total de la mesa',
   client_not_found: 'Uno de los clientes ya no existe — quitalo de la lista',
   insufficient_role: 'No tenés permiso para dividir cuentas',
   unknown: 'Error inesperado — intentá de nuevo',
@@ -55,14 +56,14 @@ export function DivisionCuentaForm({ pointsPerPeso }: Props) {
   }, 0)
 
   const parsedTotal = totalAmount ? parseFloat(totalAmount) : null
-  const mismatch =
-    parsedTotal !== null && !isNaN(parsedTotal) && sum > 0 && Math.abs(parsedTotal - sum) > 0.01
+  const hasTotal = parsedTotal !== null && !isNaN(parsedTotal) && parsedTotal > 0
+  const mismatch = hasTotal && sum > 0 && Math.abs((parsedTotal as number) - sum) > 0.01
 
   const allAmountsValid = rows.every((r) => {
     const n = parseFloat(r.amount)
     return !isNaN(n) && n > 0
   })
-  const canSubmit = rows.length >= 2 && allAmountsValid && !mismatch && !submitting
+  const canSubmit = rows.length >= 2 && allAmountsValid && hasTotal && !mismatch && !submitting
 
   function handleQueryChange(e: React.ChangeEvent<HTMLInputElement>) {
     const value = e.target.value
@@ -163,7 +164,7 @@ export function DivisionCuentaForm({ pointsPerPeso }: Props) {
   }
 
   async function handleSubmit() {
-    if (submittingRef.current) return
+    if (submittingRef.current || !hasTotal) return
     submittingRef.current = true
     setSubmitting(true)
     setSubmitError(null)
@@ -173,7 +174,7 @@ export function DivisionCuentaForm({ pointsPerPeso }: Props) {
       const splits = rows.map((r) => ({ client_id: r.id, amount: parseFloat(r.amount) }))
       const namesById = new Map(rows.map((r) => [r.id, r.full_name]))
 
-      const res = await dividirCuenta(splits, parsedTotal ?? undefined, idempotencyKey)
+      const res = await dividirCuenta(splits, parsedTotal as number, idempotencyKey)
 
       if (!res.ok) {
         setSubmitError(ERROR_MESSAGES[res.code] ?? ERROR_MESSAGES.unknown)
@@ -356,7 +357,7 @@ export function DivisionCuentaForm({ pointsPerPeso }: Props) {
         </div>
       )}
 
-      {/* Total de la mesa (opcional) + suma */}
+      {/* Total de la mesa (obligatorio) + suma */}
       {rows.length > 0 && (
         <div className="space-y-2">
           <div>
@@ -365,13 +366,14 @@ export function DivisionCuentaForm({ pointsPerPeso }: Props) {
               className="block text-xs font-medium mb-1.5"
               style={{ color: 'var(--text-muted)' }}
             >
-              Monto total de la mesa (opcional, para verificar)
+              Monto total de la mesa *
             </label>
             <input
               id="totalAmount"
               type="text"
               inputMode="numeric"
               pattern="[0-9]*"
+              required
               value={totalAmount}
               onChange={(e) => setTotalAmount(e.target.value.replace(/\D/g, ''))}
               placeholder="Ej: 15000"
@@ -404,6 +406,11 @@ export function DivisionCuentaForm({ pointsPerPeso }: Props) {
           {mismatch && (
             <p className="text-sm" style={{ color: '#f87171' }}>
               No coincide con el total de la mesa ({formatARS(parsedTotal ?? 0)})
+            </p>
+          )}
+          {!hasTotal && (
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+              Ingresá el monto total de la mesa para poder dividir
             </p>
           )}
         </div>

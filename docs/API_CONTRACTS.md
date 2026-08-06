@@ -466,7 +466,7 @@ const { data, error } = await supabase.functions.invoke('initiate-redemption', {
 {
   "redemption_id": "uuid",
   "code":          "384921",   // char(6) numérico
-  "expires_at":    "2026-06-15T21:15:00Z"  // now() + 15 minutos
+  "expires_at":    "2026-06-15T21:05:00Z"  // now() + 5 minutos (DEC-032)
 }
 
 // Errores posibles

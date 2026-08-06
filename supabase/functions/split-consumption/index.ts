@@ -79,18 +79,23 @@ Deno.serve(async (req) => {
       return json({ error: 'Bad request', code: 'duplicate_client_id' }, 400)
     }
 
-    // Validar total_amount si fue enviado (tolerancia ±0.01 para flotantes)
-    if (total_amount !== undefined) {
-      const splitsSum = (splits as SplitEntry[]).reduce((acc, s) => acc + s.amount, 0)
-      if (Math.abs(splitsSum - total_amount) > 0.01) {
-        return json({
-          error:    'Bad request',
-          code:     'amount_mismatch',
-          detail:   `La suma de splits (${splitsSum.toFixed(2)}) no coincide con total_amount (${total_amount})`,
-          sum:      splitsSum,
-          expected: total_amount,
-        }, 400)
-      }
+    // total_amount es obligatorio (hallazgo de UX/seguridad: sin esto, nada
+    // impide que la suma de splits diverja del total real de la mesa si se
+    // bypasea el frontend).
+    if (typeof total_amount !== 'number' || total_amount <= 0) {
+      return json({ error: 'Bad request', code: 'missing_total_amount' }, 400)
+    }
+
+    // Validar que la suma de splits coincida (tolerancia ±0.01 para flotantes)
+    const splitsSum = (splits as SplitEntry[]).reduce((acc, s) => acc + s.amount, 0)
+    if (Math.abs(splitsSum - total_amount) > 0.01) {
+      return json({
+        error:    'Bad request',
+        code:     'amount_mismatch',
+        detail:   `La suma de splits (${splitsSum.toFixed(2)}) no coincide con total_amount (${total_amount})`,
+        sum:      splitsSum,
+        expected: total_amount,
+      }, 400)
     }
 
     // Ejecutar función SQL atómica vía service role

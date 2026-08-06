@@ -57,12 +57,16 @@ export function CodigoCanjeCard({ id, code, expiresAt, rewardName }: Props) {
         { event: 'UPDATE', schema: 'public', table: 'redemptions', filter: `id=eq.${id}` },
         (payload) => {
           const status = (payload.new as { status?: string }).status
+          console.log('[realtime] evento recibido para redemption', id, '→ status:', status)
           if (status === 'confirmed' || status === 'expired') {
             setServerStatus(status)
           }
         },
       )
-      .subscribe()
+      .subscribe((status, err) => {
+        console.log('[realtime] canal redemption-' + id + ' → status:', status)
+        if (err) console.error('[realtime] canal redemption-' + id + ' → error:', err)
+      })
 
     return () => {
       cancelled = true

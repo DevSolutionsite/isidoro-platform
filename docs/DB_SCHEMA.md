@@ -218,7 +218,7 @@ Canjes iniciados por el cliente y confirmados por el cajero.
 | points_used | int | Puntos descontados |
 | initiated_at | timestamptz | Cuando el cliente inicia |
 | confirmed_at | timestamptz nullable | Cuando el cajero confirma |
-| expires_at | timestamptz | now() + 15 minutos (DEC-011) |
+| expires_at | timestamptz | now() + 5 minutos (DEC-011, actualizado por DEC-032) |
 | created_at | timestamptz | — |
 
 ⚠️ La confirmación del canje debe hacerse en una transacción SQL atómica: validar código + descontar puntos + actualizar stock (si aplica) + marcar como confirmed, todo o nada.

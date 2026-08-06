@@ -95,7 +95,7 @@ export type DividirCuentaResult =
 
 export async function dividirCuenta(
   splits: { client_id: string; amount: number }[],
-  totalAmount: number | undefined,
+  totalAmount: number,
   idempotencyKey: string,
 ): Promise<DividirCuentaResult> {
   const supabase = await createClient()

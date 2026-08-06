@@ -95,7 +95,7 @@ Deno.serve(async (req) => {
       return String(arr[0] % 1_000_000).padStart(6, '0')
     }
 
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString()
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString()
 
     // Insertar el canje pendiente. redemptions_code_pending_unique (índice
     // único parcial sobre code WHERE status='pending') puede rechazar el
