@@ -88,29 +88,50 @@ Deno.serve(async (req) => {
       }, 400)
     }
 
-    // Generar código numérico de 6 dígitos (DEC-009)
-    const arr = new Uint32Array(1)
-    crypto.getRandomValues(arr)
-    const code = String(arr[0] % 1_000_000).padStart(6, '0')
+    // Genera código numérico de 6 dígitos (DEC-009)
+    const generateCode = () => {
+      const arr = new Uint32Array(1)
+      crypto.getRandomValues(arr)
+      return String(arr[0] % 1_000_000).padStart(6, '0')
+    }
 
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString()
 
-    // Insertar el canje pendiente
-    const { data: redemption, error: insertError } = await adminClient
-      .from('redemptions')
-      .insert({
-        client_id:   user.id,
-        reward_id:   reward_id,
-        code:        code,
-        status:      'pending',
-        points_used: reward.points_cost,
-        expires_at:  expiresAt,
-      })
-      .select('id, code, expires_at')
-      .single()
+    // Insertar el canje pendiente. redemptions_code_pending_unique (índice
+    // único parcial sobre code WHERE status='pending') puede rechazar el
+    // insert si el código random choca con otro canje pendiente activo
+    // (paradoja del cumpleaños, espacio de 1M códigos) — se reintenta con
+    // un código nuevo hasta 5 veces antes de rendirse. Cualquier otro tipo
+    // de error corta el loop de inmediato, no es un caso para reintentar.
+    const MAX_CODE_ATTEMPTS = 5
+    let redemption: { id: string; code: string; expires_at: string } | null = null
+    let lastError: unknown = null
 
-    if (insertError || !redemption) {
-      console.error('initiate-redemption insert error:', insertError)
+    for (let attempt = 0; attempt < MAX_CODE_ATTEMPTS; attempt++) {
+      const { data, error } = await adminClient
+        .from('redemptions')
+        .insert({
+          client_id:   user.id,
+          reward_id:   reward_id,
+          code:        generateCode(),
+          status:      'pending',
+          points_used: reward.points_cost,
+          expires_at:  expiresAt,
+        })
+        .select('id, code, expires_at')
+        .single()
+
+      if (!error && data) {
+        redemption = data
+        break
+      }
+
+      lastError = error
+      if (error?.code !== '23505') break
+    }
+
+    if (!redemption) {
+      console.error('initiate-redemption insert error:', lastError)
       return json({ error: 'Failed to create redemption', code: 'db_error' }, 500)
     }
 
