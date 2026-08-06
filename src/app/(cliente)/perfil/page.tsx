@@ -16,13 +16,14 @@ export default async function PerfilPage({
   searchParams,
 }: {
   searchParams: Promise<{
-    code?:        string
-    expires?:     string
-    reward?:      string
-    canje_error?: string
+    code?:          string
+    expires?:       string
+    reward?:        string
+    redemption_id?: string
+    canje_error?:   string
   }>
 }) {
-  const { code, expires, reward, canje_error } = await searchParams
+  const { code, expires, reward, redemption_id, canje_error } = await searchParams
   const supabase = await createClient()
   const {
     data: { user },
@@ -100,8 +101,9 @@ export default async function PerfilPage({
 
       <QRDisplay qrSvg={qrSvg} />
 
-      {code && expires && reward && (
+      {code && expires && reward && redemption_id && (
         <CodigoCanjeCard
+          id={redemption_id}
           code={code}
           expiresAt={decodeURIComponent(expires)}
           rewardName={decodeURIComponent(reward)}

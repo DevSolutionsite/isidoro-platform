@@ -50,13 +50,22 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
 
-    // Verificar que la recompensa existe, está activa y tiene stock
-    const { data: reward, error: rewardError } = await adminClient
-      .from('rewards')
-      .select('id, name, points_cost, stock, is_active')
-      .eq('id', reward_id)
-      .single()
+    // Reward y balance son independientes entre sí — se piden en paralelo
+    // para no pagar dos round-trips secuenciales a la DB.
+    const [{ data: reward, error: rewardError }, { data: balance }] = await Promise.all([
+      adminClient
+        .from('rewards')
+        .select('id, name, points_cost, stock, is_active')
+        .eq('id', reward_id)
+        .single(),
+      adminClient
+        .from('points_balance')
+        .select('total_points')
+        .eq('client_id', user.id)
+        .single(),
+    ])
 
+    // Verificar que la recompensa existe, está activa y tiene stock
     if (rewardError || !reward) {
       return json({ error: 'Reward not found', code: 'reward_not_found' }, 404)
     }
@@ -68,12 +77,6 @@ Deno.serve(async (req) => {
     }
 
     // Verificar saldo del cliente (DEC-012: validación en backend obligatoria)
-    const { data: balance } = await adminClient
-      .from('points_balance')
-      .select('total_points')
-      .eq('client_id', user.id)
-      .single()
-
     const availablePoints = balance?.total_points ?? 0
 
     if (availablePoints < reward.points_cost) {

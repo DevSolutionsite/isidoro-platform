@@ -1,3 +1,7 @@
+'use client'
+
+import { useState } from 'react'
+import { useFormStatus } from 'react-dom'
 import type { Reward } from '@/lib/types'
 import { iniciarCanje } from '@/lib/actions/perfil'
 
@@ -15,7 +19,31 @@ type Props = {
   errorCode?:  string
 }
 
+// useFormStatus solo ve el pending de SU form (el que se tocó). El prop
+// `locked` cubre el caso de otro botón: si ya hay un canje de OTRA reward
+// en vuelo, este botón también se deshabilita para evitar que un segundo
+// tap dispare un segundo canje mientras el primero todavía viaja.
+function SubmitButton({ locked }: { locked: boolean }) {
+  const { pending } = useFormStatus()
+
+  return (
+    <button
+      type="submit"
+      disabled={pending || locked}
+      className="text-xs font-semibold px-3 py-1.5 rounded-full transition-opacity hover:opacity-80 disabled:opacity-30"
+      style={{
+        background: 'var(--brand-dark)',
+        color:      'var(--background)',
+      }}
+    >
+      {pending ? 'Canjeando...' : 'Canjear'}
+    </button>
+  )
+}
+
 export function RewardsList({ rewards, totalPoints, errorCode }: Props) {
+  const [pendingRewardId, setPendingRewardId] = useState<string | null>(null)
+
   const errorMsg = errorCode
     ? (CANJE_ERROR_MESSAGES[errorCode] ?? CANJE_ERROR_MESSAGES.unknown)
     : null
@@ -71,19 +99,15 @@ export function RewardsList({ rewards, totalPoints, errorCode }: Props) {
                 </span>
 
                 {canAfford && (
-                  <form action={iniciarCanje}>
+                  <form
+                    action={iniciarCanje}
+                    onSubmit={() => setPendingRewardId(reward.id)}
+                  >
                     <input type="hidden" name="reward_id"   value={reward.id} />
                     <input type="hidden" name="reward_name" value={reward.name} />
-                    <button
-                      type="submit"
-                      className="text-xs font-semibold px-3 py-1.5 rounded-full transition-opacity hover:opacity-80"
-                      style={{
-                        background: 'var(--brand-dark)',
-                        color:      'var(--background)',
-                      }}
-                    >
-                      Canjear
-                    </button>
+                    <SubmitButton
+                      locked={pendingRewardId !== null && pendingRewardId !== reward.id}
+                    />
                   </form>
                 )}
               </div>

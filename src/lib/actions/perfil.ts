@@ -27,6 +27,6 @@ export async function iniciarCanje(formData: FormData) {
   }
 
   redirect(
-    `/perfil?code=${data!.code}&expires=${encodeURIComponent(data!.expires_at)}&reward=${encodeURIComponent(rewardName)}`,
+    `/perfil?code=${data!.code}&expires=${encodeURIComponent(data!.expires_at)}&reward=${encodeURIComponent(rewardName)}&redemption_id=${data!.redemption_id}`,
   )
 }
