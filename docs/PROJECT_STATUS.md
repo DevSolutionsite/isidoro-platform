@@ -1,7 +1,7 @@
 # PROJECT_STATUS.md — Plataforma Isidoro
 > Actualizar al iniciar y cerrar cada jornada. El CTO Agent lee este archivo antes de responder cualquier pregunta.
 
-**Última actualización:** 6 de agosto de 2026 — deploy a producción con sección admin "Inicio" completa (imágenes del hero + horarios), fixes de seguridad del sistema de puntos y cierre de canje en tiempo real (ver DEC-031, DEC-032)
+**Última actualización:** 7 de agosto de 2026 — Fran (fix: padding faltante en Estadísticas, quitado botón de YouTube de la home, ver DEC-033)
 **Estado general:** EN CURSO — Semana 4 (backend completo, frontend avanzado, en producción)
 **Semana actual:** 4 de 4
 **Riesgo de plazo:** ⚠️ Medio — sitio en producción pero con 2 pendientes de config (ver Bloqueos activos): Auth de Supabase todavía apunta a localhost, y falta que Kevin autorice la GitHub App de Vercel para deploys automáticos.
@@ -81,6 +81,9 @@
 | Sistema de pedidos por WhatsApp desde `/carta` | Fran | ✅ Completado | Botón "Hacer un pedido" en el menú hamburguesa (debajo de "Hacé tu reserva aquí") abre un modal wizard de 3 pasos: elegir productos (buscador + steppers de cantidad), datos del cliente (nombre, modalidad retiro/delivery, dirección condicional, método de pago), y confirmación que arma el mensaje y abre WhatsApp al mismo número de reservas (`RESTAURANT_WHATSAPP_NUMBER` en `src/lib/constants.ts`, reutilizada — no duplicada). 100% client-side, sin persistencia en Supabase, no requiere login, no toca puntos/consumptions ni ningún otro módulo. Ver DEC-030. |
 | Pedidos por WhatsApp: 5 métodos de pago + regla condicional | Fran | ✅ Completado | Método de pago ampliado de 2 a 5 opciones (Efectivo, Transferencia, QR, Débito, Crédito) en grid de 2 columnas. Débito y Crédito quedan deshabilitados (visual + funcionalmente) cuando la modalidad es Delivery, con aviso rojo "Opción válida únicamente para retiro"; si estaban seleccionados y el cliente cambia a Delivery, el método se resetea a Efectivo automáticamente. Mapa de labels compartido (`PAYMENT_METHOD_LABELS`) usado en el form, el resumen y el mensaje de WhatsApp. Ver DEC-031. |
 | Sección admin "Inicio" (imágenes del hero + horarios) | Fran | ✅ Completado | Planificado en DEC-031 (tabla `site_content` + bucket `hero-images`, migración `20260805190000_site_content.sql`). Migración corrida y frontend completo (`/admin/inicio`, `AddHeroImageForm`, `HeroImageThumb`, Server Actions en `admin-site-content.ts`, `HeroCarousel` dinámico) — implementado en otra sesión/máquina, traído a `feature/frontend` el 6 de agosto vía merge de `main`. |
+| Fix: padding faltante en `/admin/estadisticas` | Fran | ✅ Completado | El rediseño de Estadísticas (commit `19d8554`, otra sesión) no envolvía el contenido en el wrapper `px-8 py-6` que usan el resto de las páginas del admin (`productos`, `categorías`, `inicio`, `consumos`) — las cards de KPIs, el gráfico y las tablas quedaban pegadas a los bordes del viewport. Agregado el wrapper faltante. Ver DEC-033. |
+| Quitar botón de YouTube de la landing | Fran | ✅ Completado | `SocialFooter.tsx`: sacado `youtube` de `SOCIAL_LINKS`/`SOCIAL_ITEMS` y el ícono sin uso. El link estaba en `PENDIENTE_LINK_YOUTUBE` (nunca se cargó uno real). Quedan WhatsApp, Facebook, Instagram. Ver DEC-033. |
+| Imágenes de `/carta` "no centradas" — sin reproducir | Fran | ⚠️ Riesgo | Pedido del usuario, no se pudo reproducir: solo 1 de 140 productos tiene foto real cargada (`Ribs de Cerdo`) y se ve bien centrada; la altura de las 140 cards es uniforme (108–119px, sin variación visible). Ver DEC-033 para el detalle de la investigación y la pregunta pendiente al usuario. |
 
 ---
 

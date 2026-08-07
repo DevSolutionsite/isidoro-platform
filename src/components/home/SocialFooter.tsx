@@ -1,6 +1,5 @@
 // TODO: reemplazar con los links reales de las redes de Isidoro
 const SOCIAL_LINKS = {
-  youtube: 'PENDIENTE_LINK_YOUTUBE',
   whatsapp: 'PENDIENTE_LINK_WHATSAPP',
   facebook: 'PENDIENTE_LINK_FACEBOOK',
   instagram: 'PENDIENTE_LINK_INSTAGRAM',
@@ -12,14 +11,6 @@ const ICON_PROPS = {
   viewBox: '0 0 24 24',
   'aria-hidden': true,
 } as const
-
-function YouTubeIcon() {
-  return (
-    <svg {...ICON_PROPS} fill="currentColor">
-      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.376.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.376-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814ZM9.545 15.568V8.432L15.818 12l-6.273 3.568Z" />
-    </svg>
-  )
-}
 
 function WhatsAppIcon() {
   return (
@@ -49,7 +40,6 @@ function InstagramIcon() {
 }
 
 const SOCIAL_ITEMS = [
-  { key: 'youtube', href: SOCIAL_LINKS.youtube, label: 'YouTube', Icon: YouTubeIcon },
   { key: 'whatsapp', href: SOCIAL_LINKS.whatsapp, label: 'WhatsApp', Icon: WhatsAppIcon },
   { key: 'facebook', href: SOCIAL_LINKS.facebook, label: 'Facebook', Icon: FacebookIcon },
   { key: 'instagram', href: SOCIAL_LINKS.instagram, label: 'Instagram', Icon: InstagramIcon },

@@ -353,6 +353,16 @@
 
 ---
 
+### DEC-033 — Fix padding en Estadísticas, quitar YouTube de la home, investigación de imágenes "no centradas" en `/carta`
+
+- **Fix 1 — Estadísticas sin padding lateral:** el rediseño de `/admin/estadisticas` (commit `19d8554`, hecho en otra sesión) devolvía `<div className="space-y-8">` como wrapper raíz, sin el `px-8 py-6` que envuelve el contenido en el resto de las páginas del admin (`productos`, `categorías`, `inicio`, `consumos` — las cuatro confirmadas con el mismo patrón). Resultado: las cards de KPIs, el gráfico de facturación y las tablas de top clientes/recompensas quedaban pegadas a los bordes del viewport, sobre todo notorio en pantallas angostas. Fix: agregado `px-8 py-6` al wrapper raíz, igualando el patrón. Cambio de una sola clase, sin verificación visual en navegador (no había credenciales de admin a mano en el entorno de desarrollo local) — confianza alta por tratarse de una comparación directa y mecánica contra 4 páginas ya funcionando en producción con el mismo layout de admin.
+- **Fix 2 — Botón de YouTube en la landing:** sacado de `SocialFooter.tsx` (`SOCIAL_LINKS.youtube`, la entrada en `SOCIAL_ITEMS` y el `YouTubeIcon` sin uso). El link nunca se cargó (quedaba en `PENDIENTE_LINK_YOUTUBE`). Quedan WhatsApp, Facebook e Instagram.
+- **Investigación sin conclusión — imágenes de `/carta` "no centradas":** el usuario pidió revisar que las imágenes de las cards de `/carta` estén bien centradas ("hay muchas que sí pero algunas no"), aclarando explícitamente que no se refería a las imágenes de la home. Investigación (systematic-debugging): 1) de los 140 productos, solo **uno** (`Ribs de Cerdo`) tiene `image_url` real cargada — el resto muestra el ícono placeholder, confirmado por query directa a `/rest/v1/products?image_url=not.is.null`; 2) esa única foto se ve bien encuadrada en el navegador (verificado a 1536px de ancho); 3) se descartó por evidencia la hipótesis de que las cards más altas (por descripciones largas) desalinearan verticalmente la caja de imagen — medidas las 140 cards vía JS en el DOM real, la altura va de 108 a 119px, una variación de máximo 11px, imperceptible. No se encontró ningún caso reproducible de imagen mal centrada con los datos actuales. **Pendiente:** pedirle al usuario un ejemplo puntual (nombre del producto y/o captura de pantalla) antes de tocar `ProductCard.tsx` — cambiar `object-position` a ciegas sin un caso concreto para verificar contra podría no arreglar nada o incluso empeorar el único caso real que sí funciona bien hoy.
+- **Tomada por:** Fran (Frontend Agent) — pedido directo del usuario.
+- **Fecha:** 7 de agosto de 2026
+
+---
+
 ## System Prompts de los agentes
 
 ### CTO Agent — System Prompt

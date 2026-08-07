@@ -63,7 +63,7 @@ export default async function EstadisticasPage({
   })
 
   return (
-    <div className="space-y-8">
+    <div className="px-8 py-6 space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1
