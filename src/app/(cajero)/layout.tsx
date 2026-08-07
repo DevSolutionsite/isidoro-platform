@@ -53,7 +53,7 @@ export default async function CajeroLayout({
         className="flex items-center justify-between px-5 py-3 border-b"
         style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
       >
-        <IsidoroLogo height={38} />
+        <IsidoroLogo height={48} />
         <div className="flex items-center gap-4">
           <Link
             href="/carta"

@@ -127,7 +127,7 @@ export default async function CartaPage() {
           <CategoryMenu categories={categories ?? []} products={productsWithDiscount} />
 
           <div className="flex items-center justify-center">
-            <IsidoroLogo height={48} />
+            <IsidoroLogo height={58} />
           </div>
 
           <Link
