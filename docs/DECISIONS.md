@@ -363,6 +363,20 @@
 
 ---
 
+### DEC-034 — Fix del gap bajo la imagen en `/carta` (con reproducción confirmada) + logo real en navbar/favicon
+
+- **Root cause del gap (DEC-033 quedó sin cerrar):** el usuario pasó una captura de pantalla real del bug, lo que permitió reproducirlo. `ProductCard.tsx` renderiza `<article className="flex gap-3 ...">` — un flex row **sin `items-center`** — con la caja de imagen/placeholder a la izquierda en tamaño fijo (`width: 108, height: 108`). Cuando el `<article>` no tiene `align-items` explícito, el default es `stretch`, pero como la caja de imagen tiene una altura fija (no `auto`), `stretch` no aplica y el ítem se posiciona como si fuera `flex-start` — es decir, pegado arriba. En filas donde la columna de texto empuja la altura del card por encima de 108px (nombre + descripción de 2 líneas + precio + puntos), la caja de imagen queda arriba y aparece una franja vacía del color de fondo de la card debajo — exactamente lo que mostraba la captura. La hipótesis anterior de DEC-033 (que descartaba esto por "solo 11px de variación, imperceptible") estaba equivocada en la conclusión, no en la medición — 11px de franja de un color de fondo distinto al de la caja de imagen (`--surface-alt` vs `--surface`) sí se nota, sobre todo en el caso placeholder donde el contraste de color es más marcado.
+- **Fix:** agregado `items-center` al `<article>` — la caja de imagen queda centrada verticalmente en la fila, sin franja visible. Un solo cambio de clase, sin tocar `object-position` ni la lógica de imagen/placeholder (que no tenían el problema).
+- **Verificado en navegador:** antes/después contra `Lomo Clásico` (el mismo producto de la captura) — el ícono quedó centrado igual que `La Previa` (que tiene foto real).
+- **Logo real:** el usuario proveyó `logo1.png` (marca + wordmark "ISIDORO", para navbar) y `logo2.png` (solo la marca, para favicon) en `docs/`. Antes de integrarlos se verificó que ambos son PNG con transparencia real (renderizados sobre `#1f352a` en una página de prueba local — calzan sin recuadro visible) para no arriesgarse a pegar una imagen con fondo opaco sobre el header de la app.
+  - `IsidoroLogo.tsx` (compartido por los 6 navbars: carta, home, admin, cajero, cliente) pasa de un SVG dibujado a mano al `logo1.png` real vía `next/image`, manteniendo la prop `height` existente — no hizo falta tocar ningún caller.
+  - Favicon: `logo2.png` copiado a `src/app/icon.png` (convención de Next.js App Router — Next genera el `<link rel="icon">` automáticamente). Se borró el `favicon.ico` default de Next (nunca personalizado desde el scaffold inicial) para que no compita con el ícono nuevo.
+  - Los archivos originales (`docs/logo1.png`, `docs/logo2.png`, `docs/image.png` con la captura del bug) se borraron de `docs/` una vez incorporados — ya viven en `public/logo1.png` y `src/app/icon.png`.
+- **Tomada por:** Fran (Frontend Agent) — pedido directo del usuario.
+- **Fecha:** 7 de agosto de 2026
+
+---
+
 ## System Prompts de los agentes
 
 ### CTO Agent — System Prompt
