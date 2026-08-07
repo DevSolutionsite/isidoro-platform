@@ -1,7 +1,7 @@
 # PROJECT_STATUS.md — Plataforma Isidoro
 > Actualizar al iniciar y cerrar cada jornada. El CTO Agent lee este archivo antes de responder cualquier pregunta.
 
-**Última actualización:** 7 de agosto de 2026 — Fran (fix: padding faltante en Estadísticas, quitado botón de YouTube de la home, ver DEC-033)
+**Última actualización:** 7 de agosto de 2026 — Fran (logo real en navbar + favicon, fix del gap bajo la imagen en cards de `/carta`, ver DEC-034)
 **Estado general:** EN CURSO — Semana 4 (backend completo, frontend avanzado, en producción)
 **Semana actual:** 4 de 4
 **Riesgo de plazo:** ⚠️ Medio — sitio en producción pero con 2 pendientes de config (ver Bloqueos activos): Auth de Supabase todavía apunta a localhost, y falta que Kevin autorice la GitHub App de Vercel para deploys automáticos.
@@ -83,7 +83,8 @@
 | Sección admin "Inicio" (imágenes del hero + horarios) | Fran | ✅ Completado | Planificado en DEC-031 (tabla `site_content` + bucket `hero-images`, migración `20260805190000_site_content.sql`). Migración corrida y frontend completo (`/admin/inicio`, `AddHeroImageForm`, `HeroImageThumb`, Server Actions en `admin-site-content.ts`, `HeroCarousel` dinámico) — implementado en otra sesión/máquina, traído a `feature/frontend` el 6 de agosto vía merge de `main`. |
 | Fix: padding faltante en `/admin/estadisticas` | Fran | ✅ Completado | El rediseño de Estadísticas (commit `19d8554`, otra sesión) no envolvía el contenido en el wrapper `px-8 py-6` que usan el resto de las páginas del admin (`productos`, `categorías`, `inicio`, `consumos`) — las cards de KPIs, el gráfico y las tablas quedaban pegadas a los bordes del viewport. Agregado el wrapper faltante. Ver DEC-033. |
 | Quitar botón de YouTube de la landing | Fran | ✅ Completado | `SocialFooter.tsx`: sacado `youtube` de `SOCIAL_LINKS`/`SOCIAL_ITEMS` y el ícono sin uso. El link estaba en `PENDIENTE_LINK_YOUTUBE` (nunca se cargó uno real). Quedan WhatsApp, Facebook, Instagram. Ver DEC-033. |
-| Imágenes de `/carta` "no centradas" — sin reproducir | Fran | ⚠️ Riesgo | Pedido del usuario, no se pudo reproducir: solo 1 de 140 productos tiene foto real cargada (`Ribs de Cerdo`) y se ve bien centrada; la altura de las 140 cards es uniforme (108–119px, sin variación visible). Ver DEC-033 para el detalle de la investigación y la pregunta pendiente al usuario. |
+| Fix: gap debajo del contenedor de imagen en cards de `/carta` | Fran | ✅ Completado | Causa raíz encontrada con la captura que pasó el usuario: el `<article>` de `ProductCard.tsx` es un flex row sin `items-center`, así que la caja de imagen/placeholder (108px fijo) quedaba pegada arriba (`flex-start` implícito) en vez de centrada verticalmente — visible como una franja vacía debajo en cards cuya fila crece más de 108px por texto. Fix: agregado `items-center` al `<article>`. Verificado en navegador (antes/después) contra `Lomo Clásico`. Ver DEC-034. |
+| Logo real en navbar + favicon | Fran | ✅ Completado | `IsidoroLogo.tsx` (usado en los 6 navbars de la app: carta, home, admin, cajero, cliente) pasa del SVG dibujado a mano a `logo1.png` (provisto por el usuario, copiado a `public/`) vía `next/image`. Favicon reemplazado por `logo2.png` (marca sin wordmark) como `src/app/icon.png`, convención de Next.js App Router — se borró el `favicon.ico` default de Next para no dejar dos íconos compitiendo. Verificado que ambos PNG son transparentes (calzan sobre el verde de la app) antes de integrarlos. Ver DEC-034. |
 
 ---
 
