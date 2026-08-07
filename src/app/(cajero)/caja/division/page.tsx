@@ -8,6 +8,7 @@ export const metadata: Metadata = { title: 'División de cuenta — Isidoro' }
 export default async function DivisionPage() {
   const settings = await getCachedSettings()
   const pointsPerPeso = settings?.points_per_peso ?? 1
+  const maxAmount = settings?.max_consumption_amount ?? 1000000
 
   return (
     <div className="space-y-6">
@@ -25,7 +26,7 @@ export default async function DivisionPage() {
         </p>
       </div>
 
-      <DivisionCuentaForm pointsPerPeso={pointsPerPeso} />
+      <DivisionCuentaForm pointsPerPeso={pointsPerPeso} maxAmount={maxAmount} />
     </div>
   )
 }

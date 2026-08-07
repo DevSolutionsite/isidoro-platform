@@ -104,6 +104,25 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
 
+    // Hallazgo F: tope configurable, por entrada (igual que el check > 0
+    // de arriba) — se valida acá además de en la función SQL para
+    // devolver el error sin gastar un intento de idempotency key.
+    const { data: settings } = await adminClient
+      .from('settings')
+      .select('max_consumption_amount')
+      .single()
+
+    if (settings?.max_consumption_amount != null) {
+      const tooLarge = (splits as SplitEntry[]).find((s) => s.amount > settings.max_consumption_amount)
+      if (tooLarge) {
+        return json({
+          error:  'Bad request',
+          code:   'amount_too_large',
+          detail: `El monto para client_id ${tooLarge.client_id} supera el máximo permitido`,
+        }, 400)
+      }
+    }
+
     const { data, error } = await adminClient.rpc('split_consumption', {
       p_idempotency_key: idempotency_key,
       p_cashier_id:       user.id,
@@ -116,6 +135,7 @@ Deno.serve(async (req) => {
         insufficient_splits:      400,
         duplicate_client_id:      400,
         invalid_amount:           400,
+        amount_too_large:         400,
         client_not_found:         404,
         idempotency_key_mismatch: 409,
         idempotency_claim_failed: 500,

@@ -6,7 +6,7 @@ export const getCachedSettings = unstable_cache(
     const supabase = createPublicClient()
     const { data } = await supabase
       .from('settings')
-      .select('points_per_peso, timezone')
+      .select('points_per_peso, timezone, max_consumption_amount')
       .single()
 
     return data

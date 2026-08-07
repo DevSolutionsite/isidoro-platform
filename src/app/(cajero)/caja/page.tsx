@@ -11,18 +11,26 @@ import { EscanearQRButtonCaja } from '@/components/cajero/EscanearQRButtonCaja'
 
 export const metadata: Metadata = { title: 'Caja — Isidoro' }
 
+const ERROR_MESSAGES: Record<string, string> = {
+  amount_too_large: 'El monto supera el máximo permitido por operación.',
+  invalid_amount: 'El monto ingresado no es válido.',
+  client_not_found: 'El cliente ya no existe — buscalo de nuevo.',
+  unauthorized_cashier: 'No tenés permiso para registrar consumos.',
+}
+
 export default async function CajaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; clientId?: string; done?: string; pts?: string }>
+  searchParams: Promise<{ q?: string; clientId?: string; done?: string; pts?: string; error?: string }>
 }) {
-  const { q, clientId, done, pts } = await searchParams
+  const { q, clientId, done, pts, error: errorCode } = await searchParams
   const query = q?.trim() ?? ''
 
   const supabase = await createClient()
 
   const settings = await getCachedSettings()
   const pointsPerPeso = settings?.points_per_peso ?? 1
+  const maxAmount = settings?.max_consumption_amount ?? 1000000
 
   // Done client lookup for success banner
   let doneClient: { full_name: string } | null = null
@@ -84,6 +92,16 @@ export default async function CajaPage({
   return (
     <div className="space-y-6">
       <CajaTabs active="consumo" />
+
+      {/* Error banner */}
+      {errorCode && (
+        <div
+          className="rounded-2xl px-5 py-4 text-center text-sm"
+          style={{ background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.30)', color: '#f87171' }}
+        >
+          {ERROR_MESSAGES[errorCode] ?? 'Error inesperado — intentá de nuevo.'}
+        </div>
+      )}
 
       {/* Success banner */}
       {doneClient && (
@@ -217,6 +235,7 @@ export default async function CajaPage({
             clientId={foundClient.id}
             clientName={foundClient.full_name}
             pointsPerPeso={pointsPerPeso}
+            maxAmount={maxAmount}
             action={registrarConsumo.bind(null, foundClient.id)}
           />
         </div>

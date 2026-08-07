@@ -7,6 +7,7 @@ interface RegistrarConsumoFormProps {
   clientId: string
   clientName: string
   pointsPerPeso: number
+  maxAmount: number
   action: (formData: FormData) => Promise<void>
 }
 
@@ -14,6 +15,7 @@ export function RegistrarConsumoForm({
   clientId,
   clientName,
   pointsPerPeso,
+  maxAmount,
   action,
 }: RegistrarConsumoFormProps) {
   const [amount, setAmount] = useState('')
@@ -34,7 +36,8 @@ export function RegistrarConsumoForm({
   }
 
   const parsed = parseInt(amount, 10)
-  const pts = !isNaN(parsed) && parsed > 0 ? Math.floor(parsed * pointsPerPeso) : 0
+  const exceedsMax = !isNaN(parsed) && parsed > maxAmount
+  const pts = !isNaN(parsed) && parsed > 0 && !exceedsMax ? Math.floor(parsed * pointsPerPeso) : 0
 
   return (
     <form action={action} className="space-y-5">
@@ -62,10 +65,15 @@ export function RegistrarConsumoForm({
           className="w-full rounded-xl px-4 py-3 text-lg font-semibold tabular-nums outline-none transition-colors"
           style={{
             background: 'var(--surface-alt)',
-            border: '1px solid var(--border)',
+            border: `1px solid ${exceedsMax ? 'rgba(239,68,68,0.5)' : 'var(--border)'}`,
             color: 'var(--foreground)',
           }}
         />
+        {exceedsMax && (
+          <p className="text-xs mt-1.5" style={{ color: '#f87171' }}>
+            El monto supera el máximo permitido de {formatARS(maxAmount)}
+          </p>
+        )}
       </div>
 
       {/* Preview puntos */}

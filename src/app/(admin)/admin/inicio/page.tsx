@@ -4,11 +4,13 @@ import { SuccessBanner } from '@/components/admin/SuccessBanner'
 import { HeroImageThumb } from '@/components/admin/HeroImageThumb'
 import { AddHeroImageForm } from '@/components/admin/AddHeroImageForm'
 import { addHeroImage, removeHeroImage, moveHeroImage, updateHours } from '@/lib/actions/admin-site-content'
+import { updateMaxConsumptionAmount } from '@/lib/actions/admin-settings'
 
 export const metadata: Metadata = { title: 'Inicio — Admin Isidoro' }
 
 const ERROR_MESSAGES: Record<string, string> = {
   missing_file: 'Seleccioná una imagen para agregar.',
+  invalid_max_consumption_amount: 'Ingresá un monto máximo válido, mayor a 0.',
 }
 
 export default async function InicioPage({
@@ -19,10 +21,10 @@ export default async function InicioPage({
   const { success, error } = await searchParams
 
   const supabase = await createClient()
-  const { data: siteContent } = await supabase
-    .from('site_content')
-    .select('hero_images, hours_text')
-    .single()
+  const [{ data: siteContent }, { data: settings }] = await Promise.all([
+    supabase.from('site_content').select('hero_images, hours_text').single(),
+    supabase.from('settings').select('max_consumption_amount').single(),
+  ])
 
   const heroImages: string[] = siteContent?.hero_images ?? []
   const errorMessage = error ? (ERROR_MESSAGES[error] ?? decodeURIComponent(error)) : null
@@ -86,6 +88,38 @@ export default async function InicioPage({
               className="w-full rounded-lg px-3 py-2 text-sm outline-none transition-colors"
               style={{ background: 'var(--surface-alt)', border: '1px solid var(--border)', color: 'var(--foreground)', resize: 'vertical' }}
             />
+            <button
+              type="submit"
+              className="px-5 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-80"
+              style={{ background: 'var(--brand)', color: 'var(--background)' }}
+            >
+              Guardar
+            </button>
+          </form>
+        </section>
+
+        {/* Tope máximo de consumo */}
+        <section className="max-w-lg">
+          <h2 className="text-sm font-semibold mb-3" style={{ color: 'var(--foreground)' }}>
+            Tope máximo por consumo
+          </h2>
+          <form action={updateMaxConsumptionAmount} className="space-y-3">
+            <input
+              id="max_consumption_amount"
+              name="max_consumption_amount"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              required
+              defaultValue={settings?.max_consumption_amount ?? ''}
+              placeholder="Ej: 1000000"
+              className="w-full rounded-lg px-3 py-2 text-sm font-semibold tabular-nums outline-none transition-colors"
+              style={{ background: 'var(--surface-alt)', border: '1px solid var(--border)', color: 'var(--foreground)' }}
+            />
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              Monto máximo permitido por operación. Las cargas que superen este valor serán
+              rechazadas automáticamente para prevenir errores de tipeo o cargas fraudulentas.
+            </p>
             <button
               type="submit"
               className="px-5 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-80"

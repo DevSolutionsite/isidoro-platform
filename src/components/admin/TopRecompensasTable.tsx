@@ -14,14 +14,14 @@ export function TopRecompensasTable({ rewards }: Props) {
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+    <div className="overflow-x-auto rounded-xl border" style={{ borderColor: 'var(--border)' }}>
+      <table className="w-full text-sm border-collapse">
         <thead>
-          <tr style={{ borderBottom: '1px solid var(--border)' }}>
+          <tr style={{ background: 'var(--surface-alt)', borderBottom: '1px solid var(--border)' }}>
             {['#', 'Recompensa', 'Canjes', 'Puntos usados'].map((h) => (
               <th
                 key={h}
-                className={`py-2 text-xs font-medium ${h === '#' || h === 'Recompensa' ? 'text-left pr-4' : 'text-right pr-4 last:pr-0'}`}
+                className={`px-3 py-2.5 text-xs font-medium ${h === '#' || h === 'Recompensa' ? 'text-left' : 'text-right'}`}
                 style={{ color: 'var(--text-muted)' }}
               >
                 {h}
@@ -31,17 +31,23 @@ export function TopRecompensasTable({ rewards }: Props) {
         </thead>
         <tbody>
           {rewards.map((r, i) => (
-            <tr key={r.reward_id} style={{ borderBottom: '1px solid var(--border)' }}>
-              <td className="py-2.5 pr-4 text-xs tabular-nums" style={{ color: 'var(--text-muted)' }}>
+            <tr
+              key={r.reward_id}
+              style={{
+                background: i % 2 === 0 ? 'transparent' : 'var(--surface-alt)',
+                borderBottom: i === rewards.length - 1 ? 'none' : '1px solid var(--border)',
+              }}
+            >
+              <td className="px-3 py-2.5 text-xs tabular-nums" style={{ color: 'var(--text-muted)' }}>
                 {i + 1}
               </td>
-              <td className="py-2.5 pr-4 font-medium" style={{ color: 'var(--foreground)' }}>
+              <td className="px-3 py-2.5 font-medium" style={{ color: 'var(--foreground)' }}>
                 {r.reward_name}
               </td>
-              <td className="py-2.5 pr-4 text-right tabular-nums" style={{ color: 'var(--foreground)' }}>
+              <td className="px-3 py-2.5 text-right tabular-nums" style={{ color: 'var(--foreground)' }}>
                 {r.redemption_count}
               </td>
-              <td className="py-2.5 text-right tabular-nums" style={{ color: 'var(--brand)' }}>
+              <td className="px-3 py-2.5 text-right tabular-nums" style={{ color: 'var(--brand)' }}>
                 {r.total_points_used.toLocaleString('es-AR')}
               </td>
             </tr>
