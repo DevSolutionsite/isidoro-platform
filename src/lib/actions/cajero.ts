@@ -14,7 +14,16 @@ export async function registrarConsumo(clientId: string, formData: FormData) {
     body: { client_id: clientId, amount, notes, idempotency_key: idempotencyKey },
   })
 
-  if (error) throw new Error(error.message)
+  if (error) {
+    let errorCode = 'unknown'
+    if ('context' in error && error.context instanceof Response) {
+      try {
+        const body = await (error.context as Response).json()
+        errorCode = body?.code ?? 'unknown'
+      } catch { /* ignore */ }
+    }
+    redirect(`/caja?clientId=${clientId}&error=${encodeURIComponent(errorCode)}`)
+  }
 
   redirect(`/caja?done=${clientId}&pts=${data.points_earned}`)
 }

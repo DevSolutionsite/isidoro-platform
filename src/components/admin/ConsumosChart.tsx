@@ -59,14 +59,20 @@ export function ConsumosChart({ data }: Props) {
 
       {/* Bars + X labels */}
       {data.map((d, i) => {
-        const barH     = Math.max((d.total_amount / maxAmount) * chartH, 1)
+        const isEmpty  = d.total_amount === 0
+        const barH     = isEmpty ? 3 : Math.max((d.total_amount / maxAmount) * chartH, 2)
         const x        = PAD_L + i * barSlot + gap / 2
         const y        = PAD_T + chartH - barH
         const showDate = data.length <= 10 || i === 0 || i === data.length - 1 || i % labelStep === 0
         const label    = d.date.slice(5).replace('-', '/')
         return (
           <g key={d.date}>
-            <rect x={x} y={y} width={barW} height={barH} rx={2} fill="#ca9e69" opacity={0.85} />
+            <title>{`${label}: ${isEmpty ? 'sin actividad' : `$${d.total_amount.toLocaleString('es-AR')}`}`}</title>
+            <rect
+              x={x} y={y} width={barW} height={barH} rx={2}
+              fill={isEmpty ? '#3a5545' : '#ca9e69'}
+              opacity={isEmpty ? 0.6 : 0.85}
+            />
             {showDate && (
               <text x={x + barW / 2} y={H - 4} textAnchor="middle" fontSize={7.5} fill="#9ca3af">
                 {label}

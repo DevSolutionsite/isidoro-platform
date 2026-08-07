@@ -58,7 +58,7 @@ export default async function CartaPage() {
   ] = await Promise.all([
     supabase.auth.getUser(),
     supabase.from('settings').select('points_per_peso, timezone').single(),
-    supabase.from('categories').select('*').order('sort_order', { ascending: true }),
+    supabase.from('categories').select('*').is('deleted_at', null).order('sort_order', { ascending: true }),
     supabase
       .from('products')
       .select('*, categories(name, sort_order)')

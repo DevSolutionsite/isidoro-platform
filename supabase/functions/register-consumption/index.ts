@@ -58,6 +58,18 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
 
+    // Hallazgo F: tope configurable — se valida acá además de en la
+    // función SQL para devolver el error sin gastar un intento de
+    // idempotency key en un monto que ya sabemos que va a fallar.
+    const { data: settings } = await adminClient
+      .from('settings')
+      .select('max_consumption_amount')
+      .single()
+
+    if (settings?.max_consumption_amount != null && amount > settings.max_consumption_amount) {
+      return json({ error: 'Bad request', code: 'amount_too_large' }, 400)
+    }
+
     const { data, error } = await adminClient.rpc('register_consumption', {
       p_idempotency_key: idempotency_key,
       p_client_id:        client_id,
@@ -71,6 +83,7 @@ Deno.serve(async (req) => {
       const errorMap: Record<string, number> = {
         unauthorized_cashier:        403,
         client_not_found:            404,
+        amount_too_large:            400,
         idempotency_key_mismatch:    409,
         idempotency_claim_failed:    500,
       }

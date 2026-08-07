@@ -14,6 +14,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   insufficient_splits: 'Se necesitan al menos 2 clientes para dividir la cuenta',
   invalid_client_id: 'Cliente inválido — probá buscarlo de nuevo',
   invalid_amount: 'Uno de los montos ingresados no es válido',
+  amount_too_large: 'Uno de los montos supera el máximo permitido por operación',
   duplicate_client_id: 'Hay un cliente repetido en la división',
   amount_mismatch: 'La suma de los montos no coincide con el total de la mesa',
   missing_total_amount: 'Ingresá el monto total de la mesa',
@@ -27,9 +28,10 @@ type ResultRow = SplitConsumptionEntry & { full_name: string }
 
 interface Props {
   pointsPerPeso: number
+  maxAmount: number
 }
 
-export function DivisionCuentaForm({ pointsPerPeso }: Props) {
+export function DivisionCuentaForm({ pointsPerPeso, maxAmount }: Props) {
   const [query, setQuery] = useState('')
   const [searching, setSearching] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
@@ -61,7 +63,7 @@ export function DivisionCuentaForm({ pointsPerPeso }: Props) {
 
   const allAmountsValid = rows.every((r) => {
     const n = parseFloat(r.amount)
-    return !isNaN(n) && n > 0
+    return !isNaN(n) && n > 0 && n <= maxAmount
   })
   const canSubmit = rows.length >= 2 && allAmountsValid && hasTotal && !mismatch && !submitting
 
@@ -301,7 +303,8 @@ export function DivisionCuentaForm({ pointsPerPeso }: Props) {
         <div className="space-y-2">
           {rows.map((r) => {
             const n = parseFloat(r.amount)
-            const pts = !isNaN(n) && n > 0 ? Math.floor(n * pointsPerPeso) : 0
+            const rowExceedsMax = !isNaN(n) && n > maxAmount
+            const pts = !isNaN(n) && n > 0 && !rowExceedsMax ? Math.floor(n * pointsPerPeso) : 0
             return (
               <div
                 key={r.id}
@@ -340,7 +343,7 @@ export function DivisionCuentaForm({ pointsPerPeso }: Props) {
                     className="flex-1 rounded-lg px-3 py-2 text-sm font-semibold tabular-nums outline-none"
                     style={{
                       background: 'var(--surface-alt)',
-                      border: '1px solid var(--border)',
+                      border: `1px solid ${rowExceedsMax ? 'rgba(239,68,68,0.5)' : 'var(--border)'}`,
                       color: 'var(--foreground)',
                     }}
                   />
@@ -351,6 +354,11 @@ export function DivisionCuentaForm({ pointsPerPeso }: Props) {
                     +{pts} pts
                   </span>
                 </div>
+                {rowExceedsMax && (
+                  <p className="text-xs" style={{ color: '#f87171' }}>
+                    Supera el máximo permitido de {formatARS(maxAmount)}
+                  </p>
+                )}
               </div>
             )
           })}

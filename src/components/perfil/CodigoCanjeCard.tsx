@@ -35,42 +35,59 @@ export function CodigoCanjeCard({ id, code, expiresAt, rewardName }: Props) {
   // o el código expira del lado del servidor, sin depender del countdown
   // local. El fetch inicial cubre la carrera donde el cajero ya confirmó
   // en la ventana entre initiate-redemption y este montaje.
+  //
+  // supabase-js solo sincroniza el JWT al socket de Realtime en los eventos
+  // TOKEN_REFRESHED/SIGNED_IN de onAuthStateChange (ver _handleTokenChanged
+  // en @supabase/supabase-js). Si el usuario ya tenía sesión persistida al
+  // entrar a esta página, el primer evento es INITIAL_SESSION, que no dispara
+  // ese sync: el socket queda autenticado como anon y la policy RLS
+  // "auth.uid() = client_id" nunca matchea, así que el evento se filtra en
+  // silencio. Por eso seteamos el token a mano antes de suscribir.
   useEffect(() => {
     const supabase = createClient()
     let cancelled = false
+    let channel: ReturnType<typeof supabase.channel> | null = null
 
-    supabase
-      .from('redemptions')
-      .select('status')
-      .eq('id', id)
-      .single()
-      .then(({ data }) => {
-        if (!cancelled && data && data.status !== 'pending') {
-          setServerStatus(data.status as 'confirmed' | 'expired')
-        }
-      })
+    const setup = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (cancelled) return
+      await supabase.realtime.setAuth(session?.access_token)
+      if (cancelled) return
 
-    const channel = supabase
-      .channel(`redemption-${id}`)
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'redemptions', filter: `id=eq.${id}` },
-        (payload) => {
-          const status = (payload.new as { status?: string }).status
-          console.log('[realtime] evento recibido para redemption', id, '→ status:', status)
-          if (status === 'confirmed' || status === 'expired') {
-            setServerStatus(status)
-          }
-        },
-      )
-      .subscribe((status, err) => {
-        console.log('[realtime] canal redemption-' + id + ' → status:', status)
-        if (err) console.error('[realtime] canal redemption-' + id + ' → error:', err)
-      })
+      const { data } = await supabase
+        .from('redemptions')
+        .select('status')
+        .eq('id', id)
+        .single()
+      if (!cancelled && data && data.status !== 'pending') {
+        setServerStatus(data.status as 'confirmed' | 'expired')
+      }
+      if (cancelled) return
+
+      channel = supabase
+        .channel(`redemption-${id}`)
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'redemptions', filter: `id=eq.${id}` },
+          (payload) => {
+            const status = (payload.new as { status?: string }).status
+            console.log('[realtime] evento recibido para redemption', id, '→ status:', status)
+            if (status === 'confirmed' || status === 'expired') {
+              setServerStatus(status)
+            }
+          },
+        )
+        .subscribe((status, err) => {
+          console.log('[realtime] canal redemption-' + id + ' → status:', status)
+          if (err) console.error('[realtime] canal redemption-' + id + ' → error:', err)
+        })
+    }
+
+    setup()
 
     return () => {
       cancelled = true
-      supabase.removeChannel(channel)
+      if (channel) supabase.removeChannel(channel)
     }
   }, [id])
 

@@ -57,7 +57,7 @@ export function ProductCard({ product, pointsPerPeso }: ProductCardProps) {
             alt={product.name}
             fill
             sizes="108px"
-            className="object-cover"
+            className="object-cover object-center"
             onError={() => setImageFailed(true)}
           />
         ) : (
