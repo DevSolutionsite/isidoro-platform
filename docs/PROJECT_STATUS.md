@@ -1,7 +1,7 @@
 # PROJECT_STATUS.md — Plataforma Isidoro
 > Actualizar al iniciar y cerrar cada jornada. El CTO Agent lee este archivo antes de responder cualquier pregunta.
 
-**Última actualización:** 7 de agosto de 2026 — Fran (logo real en navbar + favicon, fix del gap bajo la imagen en cards de `/carta`, ver DEC-034)
+**Última actualización:** 8 de agosto de 2026 — Fran (fix: subida de imágenes fallaba arriba de 1MB por el límite default de Server Actions de Next.js, ver DEC-035)
 **Estado general:** EN CURSO — Semana 4 (backend completo, frontend avanzado, en producción)
 **Semana actual:** 4 de 4
 **Riesgo de plazo:** ⚠️ Medio — sitio en producción pero con 2 pendientes de config (ver Bloqueos activos): Auth de Supabase todavía apunta a localhost, y falta que Kevin autorice la GitHub App de Vercel para deploys automáticos.
@@ -85,6 +85,7 @@
 | Quitar botón de YouTube de la landing | Fran | ✅ Completado | `SocialFooter.tsx`: sacado `youtube` de `SOCIAL_LINKS`/`SOCIAL_ITEMS` y el ícono sin uso. El link estaba en `PENDIENTE_LINK_YOUTUBE` (nunca se cargó uno real). Quedan WhatsApp, Facebook, Instagram. Ver DEC-033. |
 | Fix: gap debajo del contenedor de imagen en cards de `/carta` | Fran | ✅ Completado | Causa raíz encontrada con la captura que pasó el usuario: el `<article>` de `ProductCard.tsx` es un flex row sin `items-center`, así que la caja de imagen/placeholder (108px fijo) quedaba pegada arriba (`flex-start` implícito) en vez de centrada verticalmente — visible como una franja vacía debajo en cards cuya fila crece más de 108px por texto. Fix: agregado `items-center` al `<article>`. Verificado en navegador (antes/después) contra `Lomo Clásico`. Ver DEC-034. |
 | Logo real en navbar + favicon | Fran | ✅ Completado | `IsidoroLogo.tsx` (usado en los 6 navbars de la app: carta, home, admin, cajero, cliente) pasa del SVG dibujado a mano a `logo1.png` (provisto por el usuario, copiado a `public/`) vía `next/image`. Favicon reemplazado por `logo2.png` (marca sin wordmark) como `src/app/icon.png`, convención de Next.js App Router — se borró el `favicon.ico` default de Next para no dejar dos íconos compitiendo. Verificado que ambos PNG son transparentes (calzan sobre el verde de la app) antes de integrarlos. Ver DEC-034. |
+| Fix: subida de imágenes fallaba arriba de 1MB | Fran | ✅ Completado | Cliente reportó no poder subir imágenes de más de 1MB pese al límite de 5MB del bucket. Diagnóstico confirmó que el bucket (5MB, verificado en vivo vía Storage API) y la validación client-side (5MB en `ProductForm.tsx`) estaban bien — la causa real era que Next.js limita el body de una Server Action a 1MB por defecto, nunca configurado en `next.config.ts`. Mismo bug latente en la subida de imágenes del hero (`admin-site-content.ts`). Fix: `experimental.serverActions.bodySizeLimit: '6mb'` en `next.config.ts` — corrige ambos flujos de subida con un solo cambio. Ver DEC-035. |
 
 ---
 
