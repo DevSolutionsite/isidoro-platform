@@ -423,6 +423,16 @@
 
 ---
 
+### DEC-038 — `points_per_peso` ajustado a 0.1 (10% de la compra) + UI nueva en `/admin/inicio` (cierra el punto 2 de DEC-036)
+
+- **Estado encontrado:** `settings.points_per_peso` estaba en `1.0` (1 punto por peso = 100%, no 10%) desde la migración inicial. No había ningún campo editable para este valor en el admin — `/admin/inicio` solo exponía `max_consumption_amount`. El valor se lee en 3 lugares (`(cajero)/caja/page.tsx`, `(cajero)/caja/division/page.tsx`, `(public)/carta/page.tsx` para el preview de puntos) y se usa server-side en las funciones SQL atómicas (`register_consumption`, `split_consumption`) — no hacía falta ningún cambio de Kevin, es un valor de configuración, no de esquema.
+- **Fix:** agregada `updatePointsPerPeso` en `admin-settings.ts` (mismo patrón que `updateMaxConsumptionAmount`: valida `> 0`, `redirect` con `?error=` si falla) y una sección nueva en `/admin/inicio` con input numérico (`step="0.0001"`, coherente con `numeric(10,4)` de la columna). Se usó la UI nueva para hacer el cambio real a `0.1` (no un `UPDATE` directo) — verificado end-to-end en el navegador (banner "Actualizado correctamente", valor `0.1` persistido) y confirmado por lectura directa a `/rest/v1/settings` después.
+- **⚠️ Nota de comportamiento a tener en cuenta (no es un bug, es aritmética):** `register_consumption`/`split_consumption` calculan `floor(amount * points_per_peso)::int`. Con `0.1`, cualquier consumo menor a $10 acredita **0 puntos** (antes, con `1.0`, cualquier consumo entero acreditaba al menos 1 punto). Es el comportamiento esperado de "10% en puntos enteros", pero vale la pena que el cliente lo sepa si tiene productos de bajo valor (ej: un café de $8 no acreditaría puntos).
+- **Tomada por:** Fran (Frontend Agent) — pedido directo del usuario.
+- **Fecha:** 8 de agosto de 2026
+
+---
+
 ## System Prompts de los agentes
 
 ### CTO Agent — System Prompt
