@@ -377,6 +377,20 @@
 
 ---
 
+### DEC-035 — Fix: subida de imágenes falla arriba de 1MB pese al límite de 5MB del bucket
+
+- **Síntoma reportado:** un cliente no podía subir imágenes de producto de más de 1MB, aunque el bucket `product-images` está configurado con `file_size_limit: 5242880` (5MB) y la validación client-side de `ProductForm.tsx` también dice 5MB.
+- **Diagnóstico:** verificado con evidencia, no supuesto:
+  1. Bucket `product-images` en Supabase: consultado en vivo vía Storage Management API (`GET /storage/v1/bucket/product-images`) — `file_size_limit: 5242880`, `updated_at` idéntico a `created_at`, nunca modificado desde la migración `20260730160000_setup_product_images_storage.sql`. Descartado.
+  2. Validación client-side en `ProductForm.tsx`: `MAX_IMAGE_BYTES = 5 * 1024 * 1024`, mensaje "La imagen supera el límite de 5MB." — correcta. Descartado.
+  3. **Causa real:** Next.js limita el body de una Server Action a **1MB por defecto** (confirmado en `node_modules/next/dist/docs/.../serverActions.md` de la versión instalada, no por memoria — este proyecto corre una versión de Next.js con cambios respecto al conocimiento de entrenamiento, ver `AGENTS.md`). `next.config.ts` no tenía `experimental.serverActions.bodySizeLimit` configurado. `createProduct`/`updateProduct` (`src/lib/actions/admin-products.ts`) son Server Actions reales invocadas vía `<form action={formAction}>` en `ProductForm.tsx` — el archivo viaja como parte del `FormData` del body de la Server Action, así que una imagen de más de 1MB choca contra el límite del framework **antes** de llegar al chequeo de 5MB del código o a Supabase Storage.
+  - Mismo patrón (mismo bug latente) encontrado en `src/lib/actions/admin-site-content.ts` (subida de imágenes del hero en `/admin/inicio`) — no reportado por el cliente, pero mismo root cause.
+- **Fix:** agregado `experimental.serverActions.bodySizeLimit: '6mb'` en `next.config.ts` — 1MB de colchón sobre el límite real de 5MB de las imágenes, para no quedar exactos al límite. Cambio de una sola config, sin tocar `ProductForm.tsx`, `admin-products.ts` ni `admin-site-content.ts` (ya estaban bien). Corrige ambos flujos de subida (productos y hero) con un solo cambio, al ser una config a nivel de framework.
+- **Tomada por:** Fran (Frontend Agent) — diagnóstico y fix a pedido directo del usuario.
+- **Fecha:** 8 de agosto de 2026
+
+---
+
 ## System Prompts de los agentes
 
 ### CTO Agent — System Prompt
