@@ -1,7 +1,7 @@
 # PROJECT_STATUS.md — Plataforma Isidoro
 > Actualizar al iniciar y cerrar cada jornada. El CTO Agent lee este archivo antes de responder cualquier pregunta.
 
-**Última actualización:** 8 de agosto de 2026 — Fran (points_per_peso ajustado a 0.1 + UI de edición en `/admin/inicio`, segundo pedido resuelto de la reunión con el cliente del 8 de agosto, ver DEC-038)
+**Última actualización:** 8 de agosto de 2026 — Fran (migración de subcategorías escrita para Kevin, tercer pedido de la reunión del 8 de agosto en curso, ver DEC-039)
 **Estado general:** EN CURSO — Semana 4 (backend completo, frontend avanzado, en producción)
 **Semana actual:** 4 de 4
 **Riesgo de plazo:** ⚠️ Medio — sitio en producción pero con 2 pendientes de config (ver Bloqueos activos): Auth de Supabase todavía apunta a localhost, y falta que Kevin autorice la GitHub App de Vercel para deploys automáticos.
@@ -95,6 +95,7 @@
 - 🔴 **Fran/Kevin, urgente para poder usar producción de verdad:** Supabase Auth todavía tiene `Site URL` apuntando a `http://localhost:3000` — cualquier redirect que maneja Supabase (login con Google, confirmación de email, reset de contraseña) manda al usuario a localhost en vez de a producción. Fix: Dashboard de Supabase → Authentication → URL Configuration → cambiar Site URL a `https://isidoro-platform.vercel.app` y agregar `https://isidoro-platform.vercel.app/**` a Redirect URLs. No requiere cambios en Google Cloud Console (el callback de Google apunta al dominio fijo de Supabase). Ver DEC-028.
 - ⚠️ **Kevin, no bloqueante pero requerido para deploy automático:** el repo de GitHub (`kevindavezac1/isidoro-platform`) no tiene autorizada la GitHub App de Vercel, así que el proyecto de Vercel no se pudo conectar al repo — cada deploy a producción hay que dispararlo a mano (`vercel --prod`). Kevin tiene que instalar/autorizar la app de Vercel (https://github.com/apps/vercel) sobre este repo. Ver DEC-028.
 - ⚠️ **Kevin (no bloqueante):** el trigger `handle_new_user` solo lee `full_name` de `raw_user_meta_data`. `RegisterForm.tsx` ya manda `dni`, `phone` y `city` en el signup, pero esos datos se pierden porque el trigger no los captura — el usuario los reingresa una vez en `/completar-perfil`. Actualizar `supabase/migrations/20260615000001_handle_new_user.sql` (o migración nueva) para leer e insertar también esos 3 campos en `profiles` y evitar el paso duplicado. Ver DEC-019/DEC-020.
+- 🔴 **Kevin, bloqueante para el punto 1 de DEC-036 (subcategorías):** Fran escribió la migración `supabase/migrations/20260808230000_categories_parent_id.sql` (agrega `categories.parent_category_id`, ver DEC-039) pero no tiene acceso DDL al proyecto real de Supabase (mismo bloqueo que DEC-031). Kevin tiene que correr `supabase db push` con esa migración ya en el repo. El frontend (gestión de subcategorías en `/admin/categorias`, agrupación en `/carta`, selector en `ProductForm`) está planificado pero no se implementa hasta confirmar que corrió.
 
 ## Integración pendiente (Fran reemplaza mocks por datos reales)
 - ~~Carta pública → endpoints productos, categorías, time_offers, promotions~~ ✅ integrada
