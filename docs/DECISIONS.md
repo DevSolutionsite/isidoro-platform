@@ -391,6 +391,38 @@
 
 ---
 
+### DEC-036 — Pedidos del cliente en reunión del 8 de agosto (pendientes, sin implementar)
+
+- **Contexto:** reunión con el Restaurante Isidoro. El cliente está conforme con el sistema en general y pidió 5 funcionalidades nuevas. Se registran acá tal cual fueron pedidas, en el orden de prioridad que dio el cliente, **antes** de empezar a implementar ninguna — sirven de trazabilidad del pedido, no son decisiones de diseño todavía (esas se agregan por separado a medida que se resuelve cada una).
+- **Fuera de alcance de Fran:** el envío de mails con promociones lo maneja Kevin del lado de infraestructura — no forma parte de esta lista de trabajo de frontend.
+
+1. **Subcategorías** — organizar productos en subcategorías dentro de cada categoría (ej: dentro de "Bebidas" → Gaseosas, Vinos, Cervezas).
+2. **Puntos automáticos al 10% de la compra** — verificar si `settings.points_per_peso` ya está en el valor correcto (0.1) o si hay que ajustarlo, y confirmar si el cliente puede cambiarlo desde el admin o si hay que agregar esa UI.
+3. **Sección aparte para cargar recompensas manualmente** — a confirmar primero: si ya existe gestión de `rewards` en el admin, o si nunca se armó esa UI y el pedido es una sección nueva.
+4. **Admin puede designar o dar de baja roles** (cajero/admin/cliente) — hoy el rol solo se asigna por SQL directo; armar UI en el admin para cambiar el rol de cualquier usuario.
+5. **Activar/desactivar categorías y subcategorías** — agregar toggle `is_active` (o el patrón equivalente ya usado en otras tablas) para categorías, y para las subcategorías del punto 1.
+
+- **Método de trabajo:** se resuelven de a una, en el orden de arriba, no todas juntas. Cada una se documenta con su propia entrada en `DECISIONS.md` al implementarse (o al confirmarse que no hace falta implementar nada, como puede pasar con el punto 3).
+- **Tomada por:** Fran (Frontend Agent) — registrado a pedido directo del usuario, previo a cualquier implementación.
+- **Fecha:** 8 de agosto de 2026
+
+---
+
+### DEC-037 — Gestión de recompensas en el admin: nueva sección `/admin/recompensas` (cierra el punto 3 de DEC-036)
+
+- **Confirmado antes de codear:** nunca existió gestión de `rewards` en el admin — ni combinada con otra sección ni separada. Solo aparecía en 2 lugares de solo lectura: `RewardsList.tsx` (cliente, `/perfil`) y `TopRecompensasTable.tsx` (estadísticas). No había ruta, ni link en `AdminNav.tsx`, ni Server Actions (`admin-rewards.ts` no existía). El pedido del cliente es una sección enteramente nueva.
+- **Verificación en vivo de RLS antes de codear:** en vez de asumir que la escritura de `rewards` funcionaba igual que `products`/`categories` por tener la misma policy en el código fuente, se verificó con una request real: login como admin real (`kevindavezac22@gmail.com`, rol confirmado por query a `profiles`) vía `/auth/v1/token` con la `anon key`, y un POST + PATCH + DELETE de una fila de prueba contra `rewards` en producción — los 3 devolvieron 200/201 sin que Kevin tocara nada de RLS. La fila de prueba se borró en el mismo test. (Se descartó usar `service_role` para esto porque esa key bypassea RLS por completo — no hubiera probado nada sobre si un admin real puede escribir.)
+- **Patrón elegido:** se siguió `admin/promociones`, no `admin/productos` — porque `rewards` no tiene `deleted_at` (solo `is_active`, igual que `promotions`). "Eliminar" es `update({ is_active: false })`, no un soft-delete con columna propia. Sin subida de imágenes ni `useActionState`, a diferencia de productos.
+- **Archivos nuevos:** `src/lib/actions/admin-rewards.ts` (`createReward`, `updateReward`, `deleteReward`), `src/components/admin/RewardForm.tsx`, `src/app/(admin)/admin/recompensas/{page.tsx,nueva/page.tsx,[id]/editar/page.tsx}`.
+- **Archivo editado:** `src/components/admin/AdminNav.tsx` — link "Recompensas" agregado después de "Ofertas por horario", agrupado con el resto de gestión de catálogo/contenido.
+- **Campos:** los 5 que ya tiene la tabla (`name`, `description`, `points_cost`, `stock`, `is_active`). `points_cost` validado `> 0` (constraint de DB), `stock` opcional (`null` = sin límite, validado `>= 0` si se completa). Listado ordenado por `points_cost ascending`, mismo orden que ya ve el cliente en `/perfil` según `API_CONTRACTS.md`.
+- **Verificado después de codear:** `tsc --noEmit` y `eslint` limpios, `next build` compila las 3 rutas nuevas (28 rutas totales). Probado end-to-end en el navegador contra producción, logueado como el mismo admin: crear recompensa de prueba (banner "Creado correctamente"), editarla (banner "Actualizado correctamente"), desactivarla (banner "Eliminado correctamente", pill pasa a "Inactiva"), y borrado permanente de la fila de prueba por API para no dejar datos falsos en la tabla real. Los 6 recompensas reales del cliente (Café gratis, Postre de cortesía, Copa de vino, Entrada gratis, Descuento 20%, Cena para dos) se mostraron sin alteración durante toda la prueba.
+- **Documentación actualizada:** `API_CONTRACTS.md` — agregado el contrato de escritura de `rewards` (POST/PATCH), que Kevin nunca había documentado.
+- **Tomada por:** Fran (Frontend Agent) — pedido directo del usuario, plan revisado y aprobado antes de codear.
+- **Fecha:** 8 de agosto de 2026
+
+---
+
 ## System Prompts de los agentes
 
 ### CTO Agent — System Prompt
