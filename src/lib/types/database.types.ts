@@ -29,6 +29,8 @@ export type Database = {
           phone: string | null
           city: string | null
           qr_token: string
+          email_opt_out: boolean
+          unsubscribe_token: string
           created_at: string
           updated_at: string
         }
@@ -40,6 +42,8 @@ export type Database = {
           phone?: string | null
           city?: string | null
           qr_token?: string
+          email_opt_out?: boolean
+          unsubscribe_token?: string
           created_at?: string
           updated_at?: string
         }
@@ -50,6 +54,8 @@ export type Database = {
           phone?: string | null
           city?: string | null
           qr_token?: string
+          email_opt_out?: boolean
+          unsubscribe_token?: string
           updated_at?: string
         }
       }
