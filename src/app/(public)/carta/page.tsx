@@ -127,7 +127,7 @@ export default async function CartaPage() {
           <CategoryMenu categories={categories ?? []} products={productsWithDiscount} />
 
           <div className="flex items-center justify-center">
-            <IsidoroLogo height={48} />
+            <IsidoroLogo height={58} />
           </div>
 
           <Link
@@ -157,37 +157,76 @@ export default async function CartaPage() {
       {slides.length > 0 && <PromoCarousel slides={slides} />}
 
       <main className="pb-10">
-        {(categories ?? []).map((category) => {
-          const categoryProducts = productsWithDiscount
-            .filter((p) => p.category_id === category.id)
-            .sort((a, b) => a.sort_order - b.sort_order)
+        {(categories ?? [])
+          .filter((category) => !category.parent_category_id)
+          .map((category) => {
+            const subcategories = (categories ?? []).filter(
+              (c) => c.parent_category_id === category.id,
+            )
 
-          if (categoryProducts.length === 0) return null
+            const ownProducts = productsWithDiscount
+              .filter((p) => p.category_id === category.id)
+              .sort((a, b) => a.sort_order - b.sort_order)
 
-          return (
-            <section
-              key={category.id}
-              id={`section-${slugify(category.name)}`}
-              className="scroll-mt-16"
-            >
-              <h2
-                className="px-4 pb-4 pt-10 text-2xl font-semibold font-display"
-                style={{ color: 'var(--foreground)' }}
+            const subcategoryGroups = subcategories
+              .map((sub) => ({
+                subcategory: sub,
+                products: productsWithDiscount
+                  .filter((p) => p.category_id === sub.id)
+                  .sort((a, b) => a.sort_order - b.sort_order),
+              }))
+              .filter((g) => g.products.length > 0)
+
+            const hasAnyProducts = ownProducts.length > 0 || subcategoryGroups.length > 0
+            if (!hasAnyProducts) return null
+
+            return (
+              <section
+                key={category.id}
+                id={`section-${slugify(category.name)}`}
+                className="scroll-mt-16"
               >
-                {category.name}
-              </h2>
-              <div className="flex flex-col gap-4 px-4">
-                {categoryProducts.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    pointsPerPeso={pointsPerPeso}
-                  />
+                <h2
+                  className="px-4 pb-4 pt-10 text-2xl font-semibold font-display"
+                  style={{ color: 'var(--foreground)' }}
+                >
+                  {category.name}
+                </h2>
+
+                {ownProducts.length > 0 && (
+                  <div className="flex flex-col gap-4 px-4">
+                    {ownProducts.map((product) => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        pointsPerPeso={pointsPerPeso}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {subcategoryGroups.map(({ subcategory, products: subProducts }) => (
+                  <div key={subcategory.id} className="mt-6">
+                    <h3
+                      className="px-4 pb-3 text-base font-semibold"
+                      style={{ color: 'var(--brand)' }}
+                    >
+                      {subcategory.name}
+                    </h3>
+                    <div className="flex flex-col gap-4 px-4">
+                      {subProducts.map((product) => (
+                        <ProductCard
+                          key={product.id}
+                          product={product}
+                          pointsPerPeso={pointsPerPeso}
+                        />
+                      ))}
+                    </div>
+                  </div>
                 ))}
-              </div>
-            </section>
-          )
-        })}
+              </section>
+            )
+          })}
       </main>
 
       <WhatsAppChannelButton />

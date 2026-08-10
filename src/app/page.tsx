@@ -15,7 +15,7 @@ export default async function Home() {
   return (
     <div className="flex min-h-screen flex-col" style={{ background: 'var(--background)' }}>
       <header className="flex items-center justify-center py-6">
-        <IsidoroLogo height={56} />
+        <IsidoroLogo height={66} />
       </header>
 
       <main className="relative flex h-[70vh] min-h-[420px] flex-1 items-end justify-center overflow-hidden md:h-screen md:items-center">

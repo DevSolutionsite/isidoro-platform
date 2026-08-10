@@ -64,6 +64,7 @@ export type Database = {
           id: string
           name: string
           sort_order: number
+          parent_category_id: string | null
           deleted_at: string | null
           created_at: string
           updated_at: string
@@ -72,6 +73,7 @@ export type Database = {
           id?: string
           name: string
           sort_order?: number
+          parent_category_id?: string | null
           deleted_at?: string | null
           created_at?: string
           updated_at?: string
@@ -79,6 +81,7 @@ export type Database = {
         Update: {
           name?: string
           sort_order?: number
+          parent_category_id?: string | null
           deleted_at?: string | null
           updated_at?: string
         }

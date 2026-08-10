@@ -53,7 +53,7 @@ export default async function AdminLayout({
           className="flex items-center justify-center py-6 border-b"
           style={{ borderColor: 'var(--border)' }}
         >
-          <IsidoroLogo height={52} />
+          <IsidoroLogo height={62} />
         </div>
 
         {/* Nav */}

@@ -5,6 +5,9 @@ import type { Category } from '@/lib/types'
 
 interface CategoryFormProps {
   category?: Category
+  /** Categorías de nivel superior disponibles como padre (parent_category_id is null), sin incluir la propia categoría en edición. */
+  topLevelCategories: Pick<Category, 'id' | 'name'>[]
+  defaultParentId?: string
   action: (formData: FormData) => Promise<void>
   mode: 'create' | 'edit'
 }
@@ -18,7 +21,7 @@ const inputStyle = {
 const labelClass = 'block text-xs font-medium mb-1.5'
 const labelStyle = { color: 'var(--text-muted)' }
 
-export function CategoryForm({ category, action, mode }: CategoryFormProps) {
+export function CategoryForm({ category, topLevelCategories, defaultParentId, action, mode }: CategoryFormProps) {
   return (
     <form action={action} className="space-y-5 max-w-sm">
       {/* Nombre */}
@@ -58,6 +61,30 @@ export function CategoryForm({ category, action, mode }: CategoryFormProps) {
         />
         <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
           Número menor aparece primero en la carta.
+        </p>
+      </div>
+
+      {/* Categoría padre */}
+      <div>
+        <label htmlFor="parent_category_id" className={labelClass} style={labelStyle}>
+          Categoría padre
+        </label>
+        <select
+          id="parent_category_id"
+          name="parent_category_id"
+          defaultValue={category?.parent_category_id ?? defaultParentId ?? ''}
+          className={inputClass}
+          style={inputStyle}
+        >
+          <option value="">Ninguna (categoría de nivel superior)</option>
+          {topLevelCategories.map((cat) => (
+            <option key={cat.id} value={cat.id}>
+              {cat.name}
+            </option>
+          ))}
+        </select>
+        <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+          Elegí una categoría padre para crear esta como subcategoría (ej: &quot;Gaseosas&quot; dentro de &quot;Bebidas&quot;).
         </p>
       </div>
 

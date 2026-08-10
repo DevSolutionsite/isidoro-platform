@@ -29,6 +29,8 @@
 | POST /rest/v1/promotions | POST | PostgREST | ✅ Listo |
 | GET /rest/v1/time_offers | GET | PostgREST | ✅ Listo |
 | GET /rest/v1/rewards | GET | PostgREST | ✅ Listo |
+| POST /rest/v1/rewards | POST | PostgREST | ✅ Listo (verificado en vivo por Fran, DEC-036) |
+| PATCH /rest/v1/rewards | PATCH | PostgREST | ✅ Listo (verificado en vivo por Fran, DEC-036) |
 | GET /rest/v1/profiles | GET | PostgREST | ✅ Listo |
 | GET /rest/v1/points_balance | GET | PostgREST | ✅ Listo |
 | GET /rest/v1/points_transactions | GET | PostgREST | ✅ Listo |
@@ -279,6 +281,28 @@ supabase
     "is_active": true
   }
 ]
+```
+
+**POST /rest/v1/rewards**
+- Auth: Sí (rol admin)
+- ⚠️ No estaba documentado — verificado en vivo por Fran el 8 de agosto de 2026 (login real como admin + POST/PATCH/DELETE de prueba contra producción, ver DEC-036). Misma policy RLS que `products`/`categories` (`exists (... role = 'admin')`), funciona igual sin cambios de Kevin.
+```typescript
+supabase.from('rewards').insert({
+  name: "Café gratis",
+  points_cost: 50,
+  stock: 100,       // opcional, null = sin límite
+  is_active: true,  // opcional, default true
+})
+// Campos opcionales: description, stock, is_active
+```
+
+**PATCH /rest/v1/rewards?id=eq.{id}**
+- Auth: Sí (rol admin)
+- Sin `deleted_at` en esta tabla (a diferencia de `products`/`categories`) — "eliminar" es `update({ is_active: false })`, mismo patrón que `promotions`.
+```typescript
+supabase.from('rewards').update({ points_cost: 60, stock: 50 }).eq('id', id)
+// "Eliminar" (ocultar del canje):
+supabase.from('rewards').update({ is_active: false }).eq('id', id)
 ```
 
 ---

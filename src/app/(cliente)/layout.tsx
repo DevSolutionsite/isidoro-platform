@@ -51,7 +51,7 @@ export default async function ClienteLayout({
         className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 border-b"
         style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
       >
-        <IsidoroLogo height={40} />
+        <IsidoroLogo height={50} />
         <div className="flex items-center gap-3">
           <Link
             href="/carta"

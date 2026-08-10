@@ -39,7 +39,7 @@ export function ProductCard({ product, pointsPerPeso }: ProductCardProps) {
 
   return (
     <article
-      className={`flex gap-3 overflow-hidden rounded-xl border border-border bg-surface${unavailable ? ' opacity-60' : ''}`}
+      className={`flex items-center gap-3 overflow-hidden rounded-xl border border-border bg-surface${unavailable ? ' opacity-60' : ''}`}
     >
       <div
         className="flex shrink-0 items-center justify-center overflow-hidden"

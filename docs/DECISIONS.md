@@ -363,6 +363,148 @@
 
 ---
 
+### DEC-034 — Fix del gap bajo la imagen en `/carta` (con reproducción confirmada) + logo real en navbar/favicon
+
+- **Root cause del gap (DEC-033 quedó sin cerrar):** el usuario pasó una captura de pantalla real del bug, lo que permitió reproducirlo. `ProductCard.tsx` renderiza `<article className="flex gap-3 ...">` — un flex row **sin `items-center`** — con la caja de imagen/placeholder a la izquierda en tamaño fijo (`width: 108, height: 108`). Cuando el `<article>` no tiene `align-items` explícito, el default es `stretch`, pero como la caja de imagen tiene una altura fija (no `auto`), `stretch` no aplica y el ítem se posiciona como si fuera `flex-start` — es decir, pegado arriba. En filas donde la columna de texto empuja la altura del card por encima de 108px (nombre + descripción de 2 líneas + precio + puntos), la caja de imagen queda arriba y aparece una franja vacía del color de fondo de la card debajo — exactamente lo que mostraba la captura. La hipótesis anterior de DEC-033 (que descartaba esto por "solo 11px de variación, imperceptible") estaba equivocada en la conclusión, no en la medición — 11px de franja de un color de fondo distinto al de la caja de imagen (`--surface-alt` vs `--surface`) sí se nota, sobre todo en el caso placeholder donde el contraste de color es más marcado.
+- **Fix:** agregado `items-center` al `<article>` — la caja de imagen queda centrada verticalmente en la fila, sin franja visible. Un solo cambio de clase, sin tocar `object-position` ni la lógica de imagen/placeholder (que no tenían el problema).
+- **Verificado en navegador:** antes/después contra `Lomo Clásico` (el mismo producto de la captura) — el ícono quedó centrado igual que `La Previa` (que tiene foto real).
+- **Logo real:** el usuario proveyó `logo1.png` (marca + wordmark "ISIDORO", para navbar) y `logo2.png` (solo la marca, para favicon) en `docs/`. Antes de integrarlos se verificó que ambos son PNG con transparencia real (renderizados sobre `#1f352a` en una página de prueba local — calzan sin recuadro visible) para no arriesgarse a pegar una imagen con fondo opaco sobre el header de la app.
+  - `IsidoroLogo.tsx` (compartido por los 6 navbars: carta, home, admin, cajero, cliente) pasa de un SVG dibujado a mano al `logo1.png` real vía `next/image`, manteniendo la prop `height` existente — no hizo falta tocar ningún caller.
+  - Favicon: `logo2.png` copiado a `src/app/icon.png` (convención de Next.js App Router — Next genera el `<link rel="icon">` automáticamente). Se borró el `favicon.ico` default de Next (nunca personalizado desde el scaffold inicial) para que no compita con el ícono nuevo.
+  - Los archivos originales (`docs/logo1.png`, `docs/logo2.png`, `docs/image.png` con la captura del bug) se borraron de `docs/` una vez incorporados — ya viven en `public/logo1.png` y `src/app/icon.png`.
+- **Tomada por:** Fran (Frontend Agent) — pedido directo del usuario.
+- **Fecha:** 7 de agosto de 2026
+
+---
+
+### DEC-035 — Fix: subida de imágenes falla arriba de 1MB pese al límite de 5MB del bucket
+
+- **Síntoma reportado:** un cliente no podía subir imágenes de producto de más de 1MB, aunque el bucket `product-images` está configurado con `file_size_limit: 5242880` (5MB) y la validación client-side de `ProductForm.tsx` también dice 5MB.
+- **Diagnóstico:** verificado con evidencia, no supuesto:
+  1. Bucket `product-images` en Supabase: consultado en vivo vía Storage Management API (`GET /storage/v1/bucket/product-images`) — `file_size_limit: 5242880`, `updated_at` idéntico a `created_at`, nunca modificado desde la migración `20260730160000_setup_product_images_storage.sql`. Descartado.
+  2. Validación client-side en `ProductForm.tsx`: `MAX_IMAGE_BYTES = 5 * 1024 * 1024`, mensaje "La imagen supera el límite de 5MB." — correcta. Descartado.
+  3. **Causa real:** Next.js limita el body de una Server Action a **1MB por defecto** (confirmado en `node_modules/next/dist/docs/.../serverActions.md` de la versión instalada, no por memoria — este proyecto corre una versión de Next.js con cambios respecto al conocimiento de entrenamiento, ver `AGENTS.md`). `next.config.ts` no tenía `experimental.serverActions.bodySizeLimit` configurado. `createProduct`/`updateProduct` (`src/lib/actions/admin-products.ts`) son Server Actions reales invocadas vía `<form action={formAction}>` en `ProductForm.tsx` — el archivo viaja como parte del `FormData` del body de la Server Action, así que una imagen de más de 1MB choca contra el límite del framework **antes** de llegar al chequeo de 5MB del código o a Supabase Storage.
+  - Mismo patrón (mismo bug latente) encontrado en `src/lib/actions/admin-site-content.ts` (subida de imágenes del hero en `/admin/inicio`) — no reportado por el cliente, pero mismo root cause.
+- **Fix:** agregado `experimental.serverActions.bodySizeLimit: '6mb'` en `next.config.ts` — 1MB de colchón sobre el límite real de 5MB de las imágenes, para no quedar exactos al límite. Cambio de una sola config, sin tocar `ProductForm.tsx`, `admin-products.ts` ni `admin-site-content.ts` (ya estaban bien). Corrige ambos flujos de subida (productos y hero) con un solo cambio, al ser una config a nivel de framework.
+- **Tomada por:** Fran (Frontend Agent) — diagnóstico y fix a pedido directo del usuario.
+- **Fecha:** 8 de agosto de 2026
+
+---
+
+### DEC-036 — Pedidos del cliente en reunión del 8 de agosto (pendientes, sin implementar)
+
+- **Contexto:** reunión con el Restaurante Isidoro. El cliente está conforme con el sistema en general y pidió 5 funcionalidades nuevas. Se registran acá tal cual fueron pedidas, en el orden de prioridad que dio el cliente, **antes** de empezar a implementar ninguna — sirven de trazabilidad del pedido, no son decisiones de diseño todavía (esas se agregan por separado a medida que se resuelve cada una).
+- **Fuera de alcance de Fran:** el envío de mails con promociones lo maneja Kevin del lado de infraestructura — no forma parte de esta lista de trabajo de frontend.
+
+1. **Subcategorías** — organizar productos en subcategorías dentro de cada categoría (ej: dentro de "Bebidas" → Gaseosas, Vinos, Cervezas).
+2. **Puntos automáticos al 10% de la compra** — verificar si `settings.points_per_peso` ya está en el valor correcto (0.1) o si hay que ajustarlo, y confirmar si el cliente puede cambiarlo desde el admin o si hay que agregar esa UI.
+3. **Sección aparte para cargar recompensas manualmente** — a confirmar primero: si ya existe gestión de `rewards` en el admin, o si nunca se armó esa UI y el pedido es una sección nueva.
+4. **Admin puede designar o dar de baja roles** (cajero/admin/cliente) — hoy el rol solo se asigna por SQL directo; armar UI en el admin para cambiar el rol de cualquier usuario.
+5. **Activar/desactivar categorías y subcategorías** — agregar toggle `is_active` (o el patrón equivalente ya usado en otras tablas) para categorías, y para las subcategorías del punto 1.
+
+- **Método de trabajo:** se resuelven de a una, en el orden de arriba, no todas juntas. Cada una se documenta con su propia entrada en `DECISIONS.md` al implementarse (o al confirmarse que no hace falta implementar nada, como puede pasar con el punto 3).
+- **Tomada por:** Fran (Frontend Agent) — registrado a pedido directo del usuario, previo a cualquier implementación.
+- **Fecha:** 8 de agosto de 2026
+
+---
+
+### DEC-037 — Gestión de recompensas en el admin: nueva sección `/admin/recompensas` (cierra el punto 3 de DEC-036)
+
+- **Confirmado antes de codear:** nunca existió gestión de `rewards` en el admin — ni combinada con otra sección ni separada. Solo aparecía en 2 lugares de solo lectura: `RewardsList.tsx` (cliente, `/perfil`) y `TopRecompensasTable.tsx` (estadísticas). No había ruta, ni link en `AdminNav.tsx`, ni Server Actions (`admin-rewards.ts` no existía). El pedido del cliente es una sección enteramente nueva.
+- **Verificación en vivo de RLS antes de codear:** en vez de asumir que la escritura de `rewards` funcionaba igual que `products`/`categories` por tener la misma policy en el código fuente, se verificó con una request real: login como admin real (`kevindavezac22@gmail.com`, rol confirmado por query a `profiles`) vía `/auth/v1/token` con la `anon key`, y un POST + PATCH + DELETE de una fila de prueba contra `rewards` en producción — los 3 devolvieron 200/201 sin que Kevin tocara nada de RLS. La fila de prueba se borró en el mismo test. (Se descartó usar `service_role` para esto porque esa key bypassea RLS por completo — no hubiera probado nada sobre si un admin real puede escribir.)
+- **Patrón elegido:** se siguió `admin/promociones`, no `admin/productos` — porque `rewards` no tiene `deleted_at` (solo `is_active`, igual que `promotions`). "Eliminar" es `update({ is_active: false })`, no un soft-delete con columna propia. Sin subida de imágenes ni `useActionState`, a diferencia de productos.
+- **Archivos nuevos:** `src/lib/actions/admin-rewards.ts` (`createReward`, `updateReward`, `deleteReward`), `src/components/admin/RewardForm.tsx`, `src/app/(admin)/admin/recompensas/{page.tsx,nueva/page.tsx,[id]/editar/page.tsx}`.
+- **Archivo editado:** `src/components/admin/AdminNav.tsx` — link "Recompensas" agregado después de "Ofertas por horario", agrupado con el resto de gestión de catálogo/contenido.
+- **Campos:** los 5 que ya tiene la tabla (`name`, `description`, `points_cost`, `stock`, `is_active`). `points_cost` validado `> 0` (constraint de DB), `stock` opcional (`null` = sin límite, validado `>= 0` si se completa). Listado ordenado por `points_cost ascending`, mismo orden que ya ve el cliente en `/perfil` según `API_CONTRACTS.md`.
+- **Verificado después de codear:** `tsc --noEmit` y `eslint` limpios, `next build` compila las 3 rutas nuevas (28 rutas totales). Probado end-to-end en el navegador contra producción, logueado como el mismo admin: crear recompensa de prueba (banner "Creado correctamente"), editarla (banner "Actualizado correctamente"), desactivarla (banner "Eliminado correctamente", pill pasa a "Inactiva"), y borrado permanente de la fila de prueba por API para no dejar datos falsos en la tabla real. Los 6 recompensas reales del cliente (Café gratis, Postre de cortesía, Copa de vino, Entrada gratis, Descuento 20%, Cena para dos) se mostraron sin alteración durante toda la prueba.
+- **Documentación actualizada:** `API_CONTRACTS.md` — agregado el contrato de escritura de `rewards` (POST/PATCH), que Kevin nunca había documentado.
+- **Tomada por:** Fran (Frontend Agent) — pedido directo del usuario, plan revisado y aprobado antes de codear.
+- **Fecha:** 8 de agosto de 2026
+
+---
+
+### DEC-038 — `points_per_peso` ajustado a 0.1 (10% de la compra) + UI nueva en `/admin/inicio` (cierra el punto 2 de DEC-036)
+
+- **Estado encontrado:** `settings.points_per_peso` estaba en `1.0` (1 punto por peso = 100%, no 10%) desde la migración inicial. No había ningún campo editable para este valor en el admin — `/admin/inicio` solo exponía `max_consumption_amount`. El valor se lee en 3 lugares (`(cajero)/caja/page.tsx`, `(cajero)/caja/division/page.tsx`, `(public)/carta/page.tsx` para el preview de puntos) y se usa server-side en las funciones SQL atómicas (`register_consumption`, `split_consumption`) — no hacía falta ningún cambio de Kevin, es un valor de configuración, no de esquema.
+- **Fix:** agregada `updatePointsPerPeso` en `admin-settings.ts` (mismo patrón que `updateMaxConsumptionAmount`: valida `> 0`, `redirect` con `?error=` si falla) y una sección nueva en `/admin/inicio` con input numérico (`step="0.0001"`, coherente con `numeric(10,4)` de la columna). Se usó la UI nueva para hacer el cambio real a `0.1` (no un `UPDATE` directo) — verificado end-to-end en el navegador (banner "Actualizado correctamente", valor `0.1` persistido) y confirmado por lectura directa a `/rest/v1/settings` después.
+- **⚠️ Nota de comportamiento a tener en cuenta (no es un bug, es aritmética):** `register_consumption`/`split_consumption` calculan `floor(amount * points_per_peso)::int`. Con `0.1`, cualquier consumo menor a $10 acredita **0 puntos** (antes, con `1.0`, cualquier consumo entero acreditaba al menos 1 punto). Es el comportamiento esperado de "10% en puntos enteros", pero vale la pena que el cliente lo sepa si tiene productos de bajo valor (ej: un café de $8 no acreditaría puntos).
+- **Tomada por:** Fran (Frontend Agent) — pedido directo del usuario.
+- **Fecha:** 8 de agosto de 2026
+
+---
+
+### DEC-039 — Subcategorías: diseño e implementación completa (opción A), cierra el punto 1 de DEC-036
+
+- **Confirmado antes de escribir nada:** `categories` no tenía ningún campo de jerarquía en ningún lado (`DB_SCHEMA.md`, `initial_schema.sql`, tipos generados, ni ninguna de las 22 migraciones del repo). Subcategorías requiere cambio de esquema — no se puede resolver solo en frontend.
+- **Opción elegida (A) — auto-referencia en `categories`, sin tabla nueva:** `categories.parent_category_id uuid nullable references categories(id)`. Una subcategoría es una fila de `categories` con padre. `products.category_id` no cambia de significado ni de tipo — sigue apuntando a la fila "hoja" (la subcategoría, si el producto pertenece a una; la categoría de nivel superior, si no).
+  - **Por qué esta opción y no una tabla `subcategories` separada:** reutiliza toda la tabla, RLS y CRUD de `categories` tal cual (mismas policies "lectura pública" / "escritura solo admin", sin duplicar nada), y no rompe la relación `products.category_id` existente en los 140 productos ya cargados — ningún dato existente se toca.
+  - **Asunción de diseño — 2 niveles fijos, no N niveles arbitrarios:** así lo pidió el cliente (ejemplo: Bebidas → Gaseosas/Vinos/Cervezas) y así lo va a consumir el frontend. El único guardrail a nivel de DB es un `check (id <> parent_category_id)` (evita que una fila sea padre de sí misma). **No hay trigger que impida un tercer nivel** (subcategoría-de-subcategoría) — queda garantizado por el frontend: el selector de "categoría padre" en `CategoryForm` solo va a listar categorías con `parent_category_id is null`, así que nunca va a ser posible elegir una subcategoría como padre de otra. Si en el futuro alguien inserta un tercer nivel directo por API (no por la UI), no hay nada en la DB que lo bloquee — riesgo aceptado, documentado acá, no bloqueante para el pedido actual.
+- **Migración escrita, pendiente que Kevin la corra:** `supabase/migrations/20260808230000_categories_parent_id.sql` — mismo bloqueo de acceso que DEC-031 (el CLI local de Fran no tiene project ref linkeado al proyecto real). El frontend (gestión de subcategorías en `/admin/categorias`, agrupación en `/carta`, selector de categoría en `ProductForm`) queda planificado pero **no se implementa hasta confirmar que la migración corrió** — mismo criterio que DEC-031 con `site_content`.
+- **✅ Migración corrida por Kevin, verificada en vivo por Fran el 10 de agosto de 2026 (no se asumió por su palabra):**
+  1. `GET /rest/v1/categories?select=id,name,parent_category_id` — la columna existe y responde (antes hubiera dado `400 column does not exist`).
+  2. Intento de auto-referencia (`PATCH` de una categoría con `parent_category_id` = su propio `id`, autenticada como admin real) — rechazado con `23514 violates check constraint "categories_parent_not_self"`, el nombre exacto del constraint de la migración. Confirma que no se aplicó una versión distinta o simplificada.
+  3. Asignación real de padre entre 2 categorías existentes (`Vinos` como padre de `Bebidas`) — `200 OK`, y revertida a `null` en el mismo test para no dejar cambios de prueba en datos reales.
+  - Con esto el punto 1 de DEC-036 queda desbloqueado para implementación de frontend.
+- **✅ Frontend implementado y verificado en el navegador el 10 de agosto de 2026, siguiendo el plan ya aprobado:**
+  - `admin-categories.ts` (`createCategory`/`updateCategory`) — agregado `parent_category_id` al insert/update.
+  - `CategoryForm.tsx` — campo nuevo "Categoría padre" (`<select>`), listando solo categorías con `parent_category_id is null` (nunca ofrece una subcategoría como padre, así se garantiza el límite de 2 niveles desde la UI). En edición, excluye la propia categoría de las opciones.
+  - `/admin/categorias` (listado) — filas de nivel superior con sus subcategorías indentadas debajo (`— Nombre`), conteo de "Productos" en la fila padre = propios + de todas sus subcategorías (para que coincida con lo que el cliente ve agrupado en `/carta`). Link "+ Subcategoría" por fila padre → `/admin/categorias/nueva?parent=<id>` con el padre pre-seleccionado.
+  - `getCachedCategories` (`src/lib/data/categories.ts`) — trae `parent_category_id` además de `id, name`.
+  - `ProductForm.tsx` (selector de categoría) — categorías sin subcategorías se muestran igual que siempre (`<option>` suelta); categorías con subcategorías se agrupan en `<optgroup>` con una opción "(sin subcategoría)" primero, por si un producto no encaja en ninguna.
+  - `/carta` — cada categoría de nivel superior sigue siendo un `<section>`/`<h2>`; adentro, primero los productos asignados directo al padre (sin subtítulo, igual que antes), después cada subcategoría con `<h3>` y sus productos. El anchor de navegación se mantiene a nivel de categoría padre únicamente.
+  - `CategoryMenu.tsx` (drawer de navegación) — filtra a solo categorías de nivel superior para la lista de botones; sigue recibiendo y reenviando la lista completa (con subcategorías) a `OrderModal`/`ProductPicker` sin cambios ahí, porque ese componente ya agrupaba por cualquier fila de `categories` que se le pasara — una subcategoría es, para ese widget, una fila más, sin necesidad de tocar su código.
+  - Tipos: `database.types.ts` (`categories.Row/Insert/Update`) actualizado a mano con `parent_category_id: string | null` — no se pudo regenerar con `supabase gen types` (mismo bloqueo de CLI sin project ref).
+  - **Verificado en el navegador** (no solo `tsc`/`eslint`/`build`, los 3 limpios): creada "Bebidas" con subcategorías "Gaseosas"/"Vinos" por API + "Cervezas" a través del formulario real (`+ Subcategoría` → padre pre-seleccionado → alta → aparece indentada); `/admin/categorias` mostró el conteo agregado correcto (Bebidas: 3 = 1 directo + 1 Gaseosas + 1 Vinos); selector de `ProductForm` mostró el `<optgroup>` esperado; `/carta` agrupó correctamente (Entradas plano, Bebidas con "Agua mineral" directo + subtítulos "Gaseosas"/"Vinos", "Cervezas" sin productos correctamente omitida); drawer de navegación mostró solo "Entradas"/"Bebidas", sin las subcategorías.
+- **Tomada por:** Fran (Frontend Agent) — pedido directo del usuario, opción A confirmada por el usuario antes de escribir la migración, implementación aprobada y verificada en el navegador.
+- **Fecha:** 8 de agosto de 2026 (migración escrita) — 10 de agosto de 2026 (migración verificada corrida + frontend implementado y verificado)
+
+---
+
+### DEC-040 — `categories` y `products` vaciadas intencionalmente el 10 de agosto de 2026 — el sistema no está lanzado al público real
+
+- **Hallazgo:** al retomar el trabajo de subcategorías, Fran encontró `categories` y `products` completamente vacías en producción (`Content-Range: */0` vía REST, confirmado contra la URL real de Supabase, no solo localhost) — los 140 productos y 12 categorías reales del cliente (cargados en DEC-027) habían desaparecido. Se descartó que fuera un problema de permisos/RLS (a diferencia de DEC-023): dos policies estructuralmente distintas de `categories` (lectura pública filtrando por `deleted_at`, y "escritura solo admin" sin ese filtro) daban ambas 0 filas, y `rewards`/`profiles` — mismo patrón de RLS — seguían funcionando con datos reales. Fran se detuvo y avisó antes de seguir.
+- **Aclaración del usuario:** el borrado fue **intencional** — el sistema todavía no está lanzado al público real, así que no hay problema. El usuario autorizó crear categorías y productos de prueba libremente para seguir desarrollando.
+- **⚠️ Contradice el estado documentado hasta ahora:** `PROJECT_STATUS.md` y varias decisiones anteriores (DEC-027, DEC-028) describen el sitio como "en producción", con deploy real (29 jul) y 140 productos reales extraídos de la carta del cliente (26 jul). Esa descripción ya no refleja el estado actual de los datos — se actualiza `PROJECT_STATUS.md` en consecuencia (quita la afirmación de "140 productos reales cargados" como estado vigente, la dejaría como hecho histórico). El deploy de Vercel y la infraestructura siguen existiendo tal como se documentó; lo que cambió es el contenido de las tablas.
+- **Implicación para sesiones futuras:** los datos que se vean en `categories`/`products` a partir de ahora (incluyendo los de prueba creados para verificar subcategorías, ver DEC-039) no son el catálogo real del cliente. No asumir que un conteo bajo de filas es un bug — confirmar con el usuario antes de alarmarse o de intentar "recuperar" datos.
+- **Tomada por:** Fran (Frontend Agent) — hallazgo propio, aclarado por el usuario.
+- **Fecha:** 10 de agosto de 2026
+
+---
+
+### DEC-041 — `/admin/usuarios`: admin puede cambiar el rol de cualquier usuario (cierra el punto 4 de DEC-036)
+
+- **Confirmado antes de codear:** no hacía falta ningún cambio de esquema ni de RLS. La policy `"profiles: admin actualiza cualquiera"` (`for update using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'))`) ya existía desde `initial_schema.sql` y nunca se había usado desde el frontend — verificado en vivo (no asumido): login como admin real, `PATCH` del rol de una cuenta de prueba (`cliente` → `cajero` → `cliente`), ambos `200 OK`.
+- **Diseño:** nueva sección `/admin/usuarios`, no reutiliza `/admin/clientes` porque esa página filtra explícitamente `role = 'cliente'` y este pedido es sobre "cualquier usuario". Vista por defecto: solo staff actual (`role in ('cajero','admin')`) — la lista relevante del día a día, chica. Con búsqueda (reutiliza `ClientSearch.tsx` tal cual, por nombre/teléfono): cualquier perfil sin importar el rol, para poder ascender un cliente puntual sin tener que listar todos los clientes registrados.
+- **Cambio de rol inline:** `UserRoleForm.tsx` — un `<select>` por fila dentro de su propio `<form>`, con un botón "Guardar" que solo aparece si el valor difiere del rol actual (evita submits accidentales al simplemente abrir el dropdown).
+- **Guardrail — un admin no puede cambiarse el rol a sí mismo desde esta pantalla:** ni en la UI (su propia fila muestra el rol como texto plano "role (vos)", sin selector) ni en el servidor (`updateUserRole` compara `userId` contra `auth.getUser()` y redirige con error si coinciden, aunque alguien arme el request a mano). Sin esto, un admin podría autodegradarse a `cliente` por error y perder acceso al panel. No se agregó protección contra "dejar la plataforma sin ningún admin" (ej: degradar al último admin restante) — riesgo aceptado, no pedido por el cliente, hay 3 cuentas admin activas hoy.
+- **Verificado en el navegador:** vista de staff (3 admins + 1 cajero), fila propia sin selector, cambio de rol de una cuenta de prueba (`cliente ⇄ cajero`) con banner "Actualizado correctamente" y la fila apareciendo/desapareciendo del listado por defecto según corresponda, búsqueda por nombre encontrando cualquier perfil.
+- **Tomada por:** Fran (Frontend Agent) — pedido directo del usuario.
+- **Fecha:** 10 de agosto de 2026
+
+---
+
+### DEC-042 — `categories.is_active`: migración escrita para Kevin (punto 5 de DEC-036, en curso)
+
+- **Confirmado antes de escribir nada:** `categories` no tiene `is_active` — verificado en vivo (`GET /rest/v1/categories?select=is_active` devuelve `42703 column categories.is_active does not exist`). Requiere cambio de esquema, mismo bloqueo de acceso DDL que DEC-031/DEC-039 (Fran no puede correr migraciones).
+- **Diseño — mismo patrón que `products.is_available`/`promotions.is_active`:** columna `is_active boolean not null default true`, independiente de `deleted_at`. Con `is_active = false` la categoría sigue existiendo y siendo editable en `/admin/categorias`, pero se oculta de `/carta` — a diferencia de `deleted_at`, que la saca de todos lados. Como una subcategoría es una fila más de `categories` (DEC-039), la misma columna cubre "categorías y subcategorías" sin ningún trabajo adicional de esquema.
+- **Migración escrita, pendiente que Kevin la corra:** `supabase/migrations/20260810180000_categories_is_active.sql`. **El frontend correspondiente (checkbox "Activa" en `CategoryForm`, pill de estado en `/admin/categorias`, filtro en `/carta` y en `CategoryMenu`) todavía no se implementó** — a diferencia de trabajos anteriores donde a veces se adelantó el tipo TypeScript a mano, acá se decidió esperar la confirmación de Kevin antes de tocar código, porque un filtro `.filter(c => c.is_active)` contra una columna que todavía no existe en la DB real haría que `is_active` llegue `undefined` en cada fila (PostgREST con `select('*')` simplemente omite la clave si no existe) — `undefined` es falsy, así que **ocultaría todas las categorías de `/carta`** hasta que la migración corra. Mismo criterio de precaución que DEC-031/DEC-039, esta vez explícito por el riesgo concreto de romper el filtrado si se adelanta.
+- **Tomada por:** Fran (Frontend Agent) — pedido directo del usuario.
+- **Fecha:** 10 de agosto de 2026
+
+---
+
+### DEC-043 — Hardening de `updateUserRole`: chequeo explícito de admin, no confiar solo en RLS
+
+- **Hallazgo (revisión de seguridad automática sobre el commit de DEC-041):** `updateUserRole` (`admin-users.ts`) no verificaba explícitamente que quien invoca la acción fuera admin — dependía enteramente de la policy RLS `"profiles: admin actualiza cualquiera"` para bloquear la escritura. Problema concreto: los Server Actions de Next.js son endpoints propios, invocables directamente sin pasar por la página que los renderiza — el gate de `(admin)/layout.tsx` (que redirige a `/login` si `role !== 'admin'`) no protege la acción en sí. Además, si RLS bloquea un `update` sin devolver `error` (0 filas afectadas), el código original igual redirigía a `?success=updated`, mostrando un éxito falso.
+- **Qué NO era un agujero real (verificado, no asumido):** un cliente no podía escalar su propio rol a través de esta acción — el guard explícito `if (user.id === userId) redirect(...)` (agregado en DEC-041 para evitar que un admin se autodegrade) también bloqueaba de paso la auto-escalación. Y no podía cambiar el rol de otro usuario porque la policy `"profiles: admin actualiza cualquiera"` sigue exigiendo `role = 'admin'` del lado de quien llama. Es decir: la escritura real a la DB siempre estuvo protegida por RLS. Lo que faltaba era defensa en profundidad + evitar el mensaje de éxito engañoso.
+- **Fix:** antes de intentar el `update`, se agregó una consulta explícita a `profiles` para confirmar `role === 'admin'` del usuario autenticado, con `redirect('/login')` si no lo es. Además, el `update` ahora usa `.select('id')` y se verifica que `data` tenga al menos una fila — si RLS lo bloqueó silenciosamente, se lanza un error real en vez de reportar éxito.
+- **Nota — mismo patrón débil existe en el resto de `admin-*.ts`:** ninguna otra Server Action del admin (productos, categorías, promociones, recompensas, etc.) hace este chequeo explícito tampoco, todas dependen solo de RLS. Se decidió priorizar el fix únicamente acá porque `updateUserRole` es la única acción que es una escalación de privilegios (cambia quién tiene acceso a qué) — las demás, en el peor caso de un bypass del layout, exponen datos de catálogo (precio de un producto, nombre de una categoría), no acceso al sistema. Extender el mismo patrón al resto queda como mejora de hardening general, no bloqueante, no pedida por el cliente.
+- **Verificado en el navegador después del fix:** cambio de rol real (`cajero ⇄ cliente` sobre la cuenta de prueba "DevSolution") sigue funcionando con el chequeo nuevo, banner "Actualizado correctamente" correcto, cuenta revertida a su rol original.
+- **Tomada por:** Fran (Frontend Agent) — hallazgo de la revisión de seguridad automática del commit, corregido antes de pushear.
+- **Fecha:** 10 de agosto de 2026
+
+---
+
 ## System Prompts de los agentes
 
 ### CTO Agent — System Prompt
