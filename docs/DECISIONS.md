@@ -440,8 +440,13 @@
   - **Por qué esta opción y no una tabla `subcategories` separada:** reutiliza toda la tabla, RLS y CRUD de `categories` tal cual (mismas policies "lectura pública" / "escritura solo admin", sin duplicar nada), y no rompe la relación `products.category_id` existente en los 140 productos ya cargados — ningún dato existente se toca.
   - **Asunción de diseño — 2 niveles fijos, no N niveles arbitrarios:** así lo pidió el cliente (ejemplo: Bebidas → Gaseosas/Vinos/Cervezas) y así lo va a consumir el frontend. El único guardrail a nivel de DB es un `check (id <> parent_category_id)` (evita que una fila sea padre de sí misma). **No hay trigger que impida un tercer nivel** (subcategoría-de-subcategoría) — queda garantizado por el frontend: el selector de "categoría padre" en `CategoryForm` solo va a listar categorías con `parent_category_id is null`, así que nunca va a ser posible elegir una subcategoría como padre de otra. Si en el futuro alguien inserta un tercer nivel directo por API (no por la UI), no hay nada en la DB que lo bloquee — riesgo aceptado, documentado acá, no bloqueante para el pedido actual.
 - **Migración escrita, pendiente que Kevin la corra:** `supabase/migrations/20260808230000_categories_parent_id.sql` — mismo bloqueo de acceso que DEC-031 (el CLI local de Fran no tiene project ref linkeado al proyecto real). El frontend (gestión de subcategorías en `/admin/categorias`, agrupación en `/carta`, selector de categoría en `ProductForm`) queda planificado pero **no se implementa hasta confirmar que la migración corrió** — mismo criterio que DEC-031 con `site_content`.
+- **✅ Migración corrida por Kevin, verificada en vivo por Fran el 10 de agosto de 2026 (no se asumió por su palabra):**
+  1. `GET /rest/v1/categories?select=id,name,parent_category_id` — la columna existe y responde (antes hubiera dado `400 column does not exist`).
+  2. Intento de auto-referencia (`PATCH` de una categoría con `parent_category_id` = su propio `id`, autenticada como admin real) — rechazado con `23514 violates check constraint "categories_parent_not_self"`, el nombre exacto del constraint de la migración. Confirma que no se aplicó una versión distinta o simplificada.
+  3. Asignación real de padre entre 2 categorías existentes (`Vinos` como padre de `Bebidas`) — `200 OK`, y revertida a `null` en el mismo test para no dejar cambios de prueba en datos reales.
+  - Con esto el punto 1 de DEC-036 queda desbloqueado para implementación de frontend.
 - **Tomada por:** Fran (Frontend Agent) — pedido directo del usuario, opción A confirmada por el usuario antes de escribir la migración.
-- **Fecha:** 8 de agosto de 2026
+- **Fecha:** 8 de agosto de 2026 (migración escrita) — 10 de agosto de 2026 (verificada corrida)
 
 ---
 
