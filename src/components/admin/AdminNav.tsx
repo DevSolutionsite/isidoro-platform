@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: '/admin/ofertas', label: 'Ofertas por horario' },
   { href: '/admin/recompensas', label: 'Recompensas' },
   { href: '/admin/clientes', label: 'Clientes' },
+  { href: '/admin/usuarios', label: 'Usuarios' },
   { href: '/admin/consumos', label: 'Consumos' },
   { href: '/admin/estadisticas', label: 'Estadísticas' },
   { href: '/carta', label: 'Volver a la carta' },

@@ -471,6 +471,28 @@
 
 ---
 
+### DEC-041 — `/admin/usuarios`: admin puede cambiar el rol de cualquier usuario (cierra el punto 4 de DEC-036)
+
+- **Confirmado antes de codear:** no hacía falta ningún cambio de esquema ni de RLS. La policy `"profiles: admin actualiza cualquiera"` (`for update using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'))`) ya existía desde `initial_schema.sql` y nunca se había usado desde el frontend — verificado en vivo (no asumido): login como admin real, `PATCH` del rol de una cuenta de prueba (`cliente` → `cajero` → `cliente`), ambos `200 OK`.
+- **Diseño:** nueva sección `/admin/usuarios`, no reutiliza `/admin/clientes` porque esa página filtra explícitamente `role = 'cliente'` y este pedido es sobre "cualquier usuario". Vista por defecto: solo staff actual (`role in ('cajero','admin')`) — la lista relevante del día a día, chica. Con búsqueda (reutiliza `ClientSearch.tsx` tal cual, por nombre/teléfono): cualquier perfil sin importar el rol, para poder ascender un cliente puntual sin tener que listar todos los clientes registrados.
+- **Cambio de rol inline:** `UserRoleForm.tsx` — un `<select>` por fila dentro de su propio `<form>`, con un botón "Guardar" que solo aparece si el valor difiere del rol actual (evita submits accidentales al simplemente abrir el dropdown).
+- **Guardrail — un admin no puede cambiarse el rol a sí mismo desde esta pantalla:** ni en la UI (su propia fila muestra el rol como texto plano "role (vos)", sin selector) ni en el servidor (`updateUserRole` compara `userId` contra `auth.getUser()` y redirige con error si coinciden, aunque alguien arme el request a mano). Sin esto, un admin podría autodegradarse a `cliente` por error y perder acceso al panel. No se agregó protección contra "dejar la plataforma sin ningún admin" (ej: degradar al último admin restante) — riesgo aceptado, no pedido por el cliente, hay 3 cuentas admin activas hoy.
+- **Verificado en el navegador:** vista de staff (3 admins + 1 cajero), fila propia sin selector, cambio de rol de una cuenta de prueba (`cliente ⇄ cajero`) con banner "Actualizado correctamente" y la fila apareciendo/desapareciendo del listado por defecto según corresponda, búsqueda por nombre encontrando cualquier perfil.
+- **Tomada por:** Fran (Frontend Agent) — pedido directo del usuario.
+- **Fecha:** 10 de agosto de 2026
+
+---
+
+### DEC-042 — `categories.is_active`: migración escrita para Kevin (punto 5 de DEC-036, en curso)
+
+- **Confirmado antes de escribir nada:** `categories` no tiene `is_active` — verificado en vivo (`GET /rest/v1/categories?select=is_active` devuelve `42703 column categories.is_active does not exist`). Requiere cambio de esquema, mismo bloqueo de acceso DDL que DEC-031/DEC-039 (Fran no puede correr migraciones).
+- **Diseño — mismo patrón que `products.is_available`/`promotions.is_active`:** columna `is_active boolean not null default true`, independiente de `deleted_at`. Con `is_active = false` la categoría sigue existiendo y siendo editable en `/admin/categorias`, pero se oculta de `/carta` — a diferencia de `deleted_at`, que la saca de todos lados. Como una subcategoría es una fila más de `categories` (DEC-039), la misma columna cubre "categorías y subcategorías" sin ningún trabajo adicional de esquema.
+- **Migración escrita, pendiente que Kevin la corra:** `supabase/migrations/20260810180000_categories_is_active.sql`. **El frontend correspondiente (checkbox "Activa" en `CategoryForm`, pill de estado en `/admin/categorias`, filtro en `/carta` y en `CategoryMenu`) todavía no se implementó** — a diferencia de trabajos anteriores donde a veces se adelantó el tipo TypeScript a mano, acá se decidió esperar la confirmación de Kevin antes de tocar código, porque un filtro `.filter(c => c.is_active)` contra una columna que todavía no existe en la DB real haría que `is_active` llegue `undefined` en cada fila (PostgREST con `select('*')` simplemente omite la clave si no existe) — `undefined` es falsy, así que **ocultaría todas las categorías de `/carta`** hasta que la migración corra. Mismo criterio de precaución que DEC-031/DEC-039, esta vez explícito por el riesgo concreto de romper el filtrado si se adelanta.
+- **Tomada por:** Fran (Frontend Agent) — pedido directo del usuario.
+- **Fecha:** 10 de agosto de 2026
+
+---
+
 ## System Prompts de los agentes
 
 ### CTO Agent — System Prompt
