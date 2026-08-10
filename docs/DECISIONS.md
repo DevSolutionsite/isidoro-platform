@@ -493,6 +493,18 @@
 
 ---
 
+### DEC-043 — Hardening de `updateUserRole`: chequeo explícito de admin, no confiar solo en RLS
+
+- **Hallazgo (revisión de seguridad automática sobre el commit de DEC-041):** `updateUserRole` (`admin-users.ts`) no verificaba explícitamente que quien invoca la acción fuera admin — dependía enteramente de la policy RLS `"profiles: admin actualiza cualquiera"` para bloquear la escritura. Problema concreto: los Server Actions de Next.js son endpoints propios, invocables directamente sin pasar por la página que los renderiza — el gate de `(admin)/layout.tsx` (que redirige a `/login` si `role !== 'admin'`) no protege la acción en sí. Además, si RLS bloquea un `update` sin devolver `error` (0 filas afectadas), el código original igual redirigía a `?success=updated`, mostrando un éxito falso.
+- **Qué NO era un agujero real (verificado, no asumido):** un cliente no podía escalar su propio rol a través de esta acción — el guard explícito `if (user.id === userId) redirect(...)` (agregado en DEC-041 para evitar que un admin se autodegrade) también bloqueaba de paso la auto-escalación. Y no podía cambiar el rol de otro usuario porque la policy `"profiles: admin actualiza cualquiera"` sigue exigiendo `role = 'admin'` del lado de quien llama. Es decir: la escritura real a la DB siempre estuvo protegida por RLS. Lo que faltaba era defensa en profundidad + evitar el mensaje de éxito engañoso.
+- **Fix:** antes de intentar el `update`, se agregó una consulta explícita a `profiles` para confirmar `role === 'admin'` del usuario autenticado, con `redirect('/login')` si no lo es. Además, el `update` ahora usa `.select('id')` y se verifica que `data` tenga al menos una fila — si RLS lo bloqueó silenciosamente, se lanza un error real en vez de reportar éxito.
+- **Nota — mismo patrón débil existe en el resto de `admin-*.ts`:** ninguna otra Server Action del admin (productos, categorías, promociones, recompensas, etc.) hace este chequeo explícito tampoco, todas dependen solo de RLS. Se decidió priorizar el fix únicamente acá porque `updateUserRole` es la única acción que es una escalación de privilegios (cambia quién tiene acceso a qué) — las demás, en el peor caso de un bypass del layout, exponen datos de catálogo (precio de un producto, nombre de una categoría), no acceso al sistema. Extender el mismo patrón al resto queda como mejora de hardening general, no bloqueante, no pedida por el cliente.
+- **Verificado en el navegador después del fix:** cambio de rol real (`cajero ⇄ cliente` sobre la cuenta de prueba "DevSolution") sigue funcionando con el chequeo nuevo, banner "Actualizado correctamente" correcto, cuenta revertida a su rol original.
+- **Tomada por:** Fran (Frontend Agent) — hallazgo de la revisión de seguridad automática del commit, corregido antes de pushear.
+- **Fecha:** 10 de agosto de 2026
+
+---
+
 ## System Prompts de los agentes
 
 ### CTO Agent — System Prompt
