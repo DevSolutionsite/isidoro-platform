@@ -6,7 +6,7 @@ export const getCachedCategories = unstable_cache(
     const supabase = createPublicClient()
     const { data } = await supabase
       .from('categories')
-      .select('id, name')
+      .select('id, name, parent_category_id')
       .is('deleted_at', null)
       .order('sort_order', { ascending: true })
 

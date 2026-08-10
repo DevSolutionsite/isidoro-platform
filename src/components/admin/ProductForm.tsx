@@ -8,7 +8,7 @@ import type { ProductActionState } from '@/lib/actions/admin-products'
 
 interface ProductFormProps {
   product?: Product
-  categories: Pick<Category, 'id' | 'name'>[]
+  categories: Pick<Category, 'id' | 'name' | 'parent_category_id'>[]
   action: (prevState: ProductActionState, formData: FormData) => Promise<ProductActionState>
   mode: 'create' | 'edit'
 }
@@ -64,6 +64,15 @@ export function ProductForm({ product, categories, action, mode }: ProductFormPr
 
   const displayError = fileError ?? state.error
 
+  const topLevelCategories = categories.filter((c) => !c.parent_category_id)
+  const subcategoriesByParent = new Map<string, typeof categories>()
+  for (const cat of categories) {
+    if (!cat.parent_category_id) continue
+    const list = subcategoriesByParent.get(cat.parent_category_id) ?? []
+    list.push(cat)
+    subcategoriesByParent.set(cat.parent_category_id, list)
+  }
+
   return (
     <form ref={formRef} action={formAction} className="space-y-5 max-w-lg">
       {displayError && (
@@ -105,11 +114,26 @@ export function ProductForm({ product, categories, action, mode }: ProductFormPr
           style={inputStyle}
         >
           <option value="">Seleccioná una categoría</option>
-          {categories.map((cat) => (
-            <option key={cat.id} value={cat.id}>
-              {cat.name}
-            </option>
-          ))}
+          {topLevelCategories.map((cat) => {
+            const subcats = subcategoriesByParent.get(cat.id) ?? []
+            if (subcats.length === 0) {
+              return (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              )
+            }
+            return (
+              <optgroup key={cat.id} label={cat.name}>
+                <option value={cat.id}>{cat.name} (sin subcategoría)</option>
+                {subcats.map((sub) => (
+                  <option key={sub.id} value={sub.id}>
+                    {sub.name}
+                  </option>
+                ))}
+              </optgroup>
+            )
+          })}
         </select>
       </div>
 

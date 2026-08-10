@@ -7,7 +7,7 @@ import { OrderModal } from './order/OrderModal'
 import type { Category, ProductWithDiscount } from '@/lib/types'
 
 interface CategoryMenuProps {
-  categories: Pick<Category, 'id' | 'name'>[]
+  categories: Pick<Category, 'id' | 'name' | 'parent_category_id'>[]
   products: ProductWithDiscount[]
 }
 
@@ -18,6 +18,10 @@ const MAPS_URL =
 export function CategoryMenu({ categories, products }: CategoryMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isOrderOpen, setIsOrderOpen] = useState(false)
+  // El drawer de navegación solo salta a categorías de nivel superior — las
+  // subcategorías se muestran agrupadas dentro de esa sección en /carta,
+  // no como destinos de navegación propios.
+  const topLevelCategories = categories.filter((c) => !c.parent_category_id)
 
   function handleSelect(category: Pick<Category, 'id' | 'name'>) {
     setIsOpen(false)
@@ -102,7 +106,7 @@ export function CategoryMenu({ categories, products }: CategoryMenuProps) {
             </div>
 
             <nav className="flex-1 overflow-y-auto py-2">
-              {categories.map((cat) => (
+              {topLevelCategories.map((cat) => (
                 <button
                   key={cat.id}
                   type="button"

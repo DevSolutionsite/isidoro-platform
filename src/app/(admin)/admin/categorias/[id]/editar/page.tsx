@@ -15,11 +15,16 @@ export default async function EditarCategoriaPage({
   const { id } = await params
   const supabase = await createClient()
 
-  const { data: category } = await supabase
-    .from('categories')
-    .select('*')
-    .eq('id', id)
-    .single()
+  const [{ data: category }, { data: topLevelCategories }] = await Promise.all([
+    supabase.from('categories').select('*').eq('id', id).single(),
+    supabase
+      .from('categories')
+      .select('id, name')
+      .is('deleted_at', null)
+      .is('parent_category_id', null)
+      .neq('id', id)
+      .order('sort_order', { ascending: true }),
+  ])
 
   if (!category) notFound()
 
@@ -42,6 +47,7 @@ export default async function EditarCategoriaPage({
       </div>
       <CategoryForm
         category={category}
+        topLevelCategories={topLevelCategories ?? []}
         action={updateCategory.bind(null, id)}
         mode="edit"
       />

@@ -433,7 +433,7 @@
 
 ---
 
-### DEC-039 — Subcategorías: diseño de esquema (opción A) y migración escrita para Kevin (punto 1 de DEC-036, en curso)
+### DEC-039 — Subcategorías: diseño e implementación completa (opción A), cierra el punto 1 de DEC-036
 
 - **Confirmado antes de escribir nada:** `categories` no tenía ningún campo de jerarquía en ningún lado (`DB_SCHEMA.md`, `initial_schema.sql`, tipos generados, ni ninguna de las 22 migraciones del repo). Subcategorías requiere cambio de esquema — no se puede resolver solo en frontend.
 - **Opción elegida (A) — auto-referencia en `categories`, sin tabla nueva:** `categories.parent_category_id uuid nullable references categories(id)`. Una subcategoría es una fila de `categories` con padre. `products.category_id` no cambia de significado ni de tipo — sigue apuntando a la fila "hoja" (la subcategoría, si el producto pertenece a una; la categoría de nivel superior, si no).
@@ -445,8 +445,29 @@
   2. Intento de auto-referencia (`PATCH` de una categoría con `parent_category_id` = su propio `id`, autenticada como admin real) — rechazado con `23514 violates check constraint "categories_parent_not_self"`, el nombre exacto del constraint de la migración. Confirma que no se aplicó una versión distinta o simplificada.
   3. Asignación real de padre entre 2 categorías existentes (`Vinos` como padre de `Bebidas`) — `200 OK`, y revertida a `null` en el mismo test para no dejar cambios de prueba en datos reales.
   - Con esto el punto 1 de DEC-036 queda desbloqueado para implementación de frontend.
-- **Tomada por:** Fran (Frontend Agent) — pedido directo del usuario, opción A confirmada por el usuario antes de escribir la migración.
-- **Fecha:** 8 de agosto de 2026 (migración escrita) — 10 de agosto de 2026 (verificada corrida)
+- **✅ Frontend implementado y verificado en el navegador el 10 de agosto de 2026, siguiendo el plan ya aprobado:**
+  - `admin-categories.ts` (`createCategory`/`updateCategory`) — agregado `parent_category_id` al insert/update.
+  - `CategoryForm.tsx` — campo nuevo "Categoría padre" (`<select>`), listando solo categorías con `parent_category_id is null` (nunca ofrece una subcategoría como padre, así se garantiza el límite de 2 niveles desde la UI). En edición, excluye la propia categoría de las opciones.
+  - `/admin/categorias` (listado) — filas de nivel superior con sus subcategorías indentadas debajo (`— Nombre`), conteo de "Productos" en la fila padre = propios + de todas sus subcategorías (para que coincida con lo que el cliente ve agrupado en `/carta`). Link "+ Subcategoría" por fila padre → `/admin/categorias/nueva?parent=<id>` con el padre pre-seleccionado.
+  - `getCachedCategories` (`src/lib/data/categories.ts`) — trae `parent_category_id` además de `id, name`.
+  - `ProductForm.tsx` (selector de categoría) — categorías sin subcategorías se muestran igual que siempre (`<option>` suelta); categorías con subcategorías se agrupan en `<optgroup>` con una opción "(sin subcategoría)" primero, por si un producto no encaja en ninguna.
+  - `/carta` — cada categoría de nivel superior sigue siendo un `<section>`/`<h2>`; adentro, primero los productos asignados directo al padre (sin subtítulo, igual que antes), después cada subcategoría con `<h3>` y sus productos. El anchor de navegación se mantiene a nivel de categoría padre únicamente.
+  - `CategoryMenu.tsx` (drawer de navegación) — filtra a solo categorías de nivel superior para la lista de botones; sigue recibiendo y reenviando la lista completa (con subcategorías) a `OrderModal`/`ProductPicker` sin cambios ahí, porque ese componente ya agrupaba por cualquier fila de `categories` que se le pasara — una subcategoría es, para ese widget, una fila más, sin necesidad de tocar su código.
+  - Tipos: `database.types.ts` (`categories.Row/Insert/Update`) actualizado a mano con `parent_category_id: string | null` — no se pudo regenerar con `supabase gen types` (mismo bloqueo de CLI sin project ref).
+  - **Verificado en el navegador** (no solo `tsc`/`eslint`/`build`, los 3 limpios): creada "Bebidas" con subcategorías "Gaseosas"/"Vinos" por API + "Cervezas" a través del formulario real (`+ Subcategoría` → padre pre-seleccionado → alta → aparece indentada); `/admin/categorias` mostró el conteo agregado correcto (Bebidas: 3 = 1 directo + 1 Gaseosas + 1 Vinos); selector de `ProductForm` mostró el `<optgroup>` esperado; `/carta` agrupó correctamente (Entradas plano, Bebidas con "Agua mineral" directo + subtítulos "Gaseosas"/"Vinos", "Cervezas" sin productos correctamente omitida); drawer de navegación mostró solo "Entradas"/"Bebidas", sin las subcategorías.
+- **Tomada por:** Fran (Frontend Agent) — pedido directo del usuario, opción A confirmada por el usuario antes de escribir la migración, implementación aprobada y verificada en el navegador.
+- **Fecha:** 8 de agosto de 2026 (migración escrita) — 10 de agosto de 2026 (migración verificada corrida + frontend implementado y verificado)
+
+---
+
+### DEC-040 — `categories` y `products` vaciadas intencionalmente el 10 de agosto de 2026 — el sistema no está lanzado al público real
+
+- **Hallazgo:** al retomar el trabajo de subcategorías, Fran encontró `categories` y `products` completamente vacías en producción (`Content-Range: */0` vía REST, confirmado contra la URL real de Supabase, no solo localhost) — los 140 productos y 12 categorías reales del cliente (cargados en DEC-027) habían desaparecido. Se descartó que fuera un problema de permisos/RLS (a diferencia de DEC-023): dos policies estructuralmente distintas de `categories` (lectura pública filtrando por `deleted_at`, y "escritura solo admin" sin ese filtro) daban ambas 0 filas, y `rewards`/`profiles` — mismo patrón de RLS — seguían funcionando con datos reales. Fran se detuvo y avisó antes de seguir.
+- **Aclaración del usuario:** el borrado fue **intencional** — el sistema todavía no está lanzado al público real, así que no hay problema. El usuario autorizó crear categorías y productos de prueba libremente para seguir desarrollando.
+- **⚠️ Contradice el estado documentado hasta ahora:** `PROJECT_STATUS.md` y varias decisiones anteriores (DEC-027, DEC-028) describen el sitio como "en producción", con deploy real (29 jul) y 140 productos reales extraídos de la carta del cliente (26 jul). Esa descripción ya no refleja el estado actual de los datos — se actualiza `PROJECT_STATUS.md` en consecuencia (quita la afirmación de "140 productos reales cargados" como estado vigente, la dejaría como hecho histórico). El deploy de Vercel y la infraestructura siguen existiendo tal como se documentó; lo que cambió es el contenido de las tablas.
+- **Implicación para sesiones futuras:** los datos que se vean en `categories`/`products` a partir de ahora (incluyendo los de prueba creados para verificar subcategorías, ver DEC-039) no son el catálogo real del cliente. No asumir que un conteo bajo de filas es un bug — confirmar con el usuario antes de alarmarse o de intentar "recuperar" datos.
+- **Tomada por:** Fran (Frontend Agent) — hallazgo propio, aclarado por el usuario.
+- **Fecha:** 10 de agosto de 2026
 
 ---
 

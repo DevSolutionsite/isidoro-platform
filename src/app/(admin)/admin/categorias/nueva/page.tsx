@@ -1,11 +1,26 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/server'
 import { CategoryForm } from '@/components/admin/CategoryForm'
 import { createCategory } from '@/lib/actions/admin-categories'
 
 export const metadata: Metadata = { title: 'Nueva categoría — Admin Isidoro' }
 
-export default function NuevaCategoriaPage() {
+export default async function NuevaCategoriaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ parent?: string }>
+}) {
+  const { parent } = await searchParams
+  const supabase = await createClient()
+
+  const { data: topLevelCategories } = await supabase
+    .from('categories')
+    .select('id, name')
+    .is('deleted_at', null)
+    .is('parent_category_id', null)
+    .order('sort_order', { ascending: true })
+
   return (
     <div className="px-8 py-6">
       <div className="mb-6">
@@ -20,7 +35,12 @@ export default function NuevaCategoriaPage() {
           Nueva categoría
         </h1>
       </div>
-      <CategoryForm action={createCategory} mode="create" />
+      <CategoryForm
+        topLevelCategories={topLevelCategories ?? []}
+        defaultParentId={parent}
+        action={createCategory}
+        mode="create"
+      />
     </div>
   )
 }

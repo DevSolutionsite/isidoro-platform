@@ -22,12 +22,35 @@ export default async function CategoriasPage({
   ])
 
   const categoryList = categories ?? []
-  const productCountMap = Object.fromEntries(
+  const topLevel = categoryList.filter((c) => !c.parent_category_id)
+  const subcategoriesByParent = new Map<string, typeof categoryList>()
+  for (const cat of categoryList) {
+    if (!cat.parent_category_id) continue
+    const list = subcategoriesByParent.get(cat.parent_category_id) ?? []
+    list.push(cat)
+    subcategoriesByParent.set(cat.parent_category_id, list)
+  }
+
+  // Conteo directo (productos con category_id = esta fila exacta)
+  const directCountMap = Object.fromEntries(
     categoryList.map((c) => [
       c.id,
       (products ?? []).filter((p) => p.category_id === c.id).length,
     ]),
   )
+  // Conteo total de una categoría de nivel superior: propio + el de todas sus subcategorías,
+  // para que coincida con lo que el cliente ve agrupado bajo ese título en /carta.
+  function totalCount(categoryId: string): number {
+    const own = directCountMap[categoryId] ?? 0
+    const subs = subcategoriesByParent.get(categoryId) ?? []
+    return own + subs.reduce((sum, s) => sum + (directCountMap[s.id] ?? 0), 0)
+  }
+
+  // Filas en orden de despliegue: cada categoría de nivel superior seguida de sus subcategorías.
+  const rows = topLevel.flatMap((cat) => [
+    { category: cat, isSub: false },
+    ...(subcategoriesByParent.get(cat.id) ?? []).map((sub) => ({ category: sub, isSub: true })),
+  ])
 
   return (
     <div>
@@ -40,7 +63,10 @@ export default async function CategoriasPage({
               Categorías
             </h1>
             <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-              {categoryList.length} categoría{categoryList.length !== 1 ? 's' : ''} en carta
+              {topLevel.length} categoría{topLevel.length !== 1 ? 's' : ''} en carta
+              {categoryList.length > topLevel.length && (
+                <> · {categoryList.length - topLevel.length} subcategoría{categoryList.length - topLevel.length !== 1 ? 's' : ''}</>
+              )}
             </p>
           </div>
           <Link
@@ -74,7 +100,7 @@ export default async function CategoriasPage({
               </tr>
             </thead>
             <tbody>
-              {categoryList.map((cat, i) => (
+              {rows.map(({ category: cat, isSub }, i) => (
                 <tr
                   key={cat.id}
                   style={{
@@ -82,17 +108,34 @@ export default async function CategoriasPage({
                     borderBottom: '1px solid var(--border)',
                   }}
                 >
-                  <td className="px-4 py-3 font-medium" style={{ color: 'var(--foreground)' }}>
+                  <td
+                    className="px-4 py-3"
+                    style={{
+                      color: isSub ? 'var(--text-muted)' : 'var(--foreground)',
+                      fontWeight: isSub ? 400 : 500,
+                      paddingLeft: isSub ? '2.5rem' : undefined,
+                    }}
+                  >
+                    {isSub && '— '}
                     {cat.name}
                   </td>
                   <td className="px-4 py-3 text-center tabular-nums" style={{ color: 'var(--text-muted)' }}>
                     {cat.sort_order}
                   </td>
                   <td className="px-4 py-3 text-center tabular-nums" style={{ color: 'var(--text-muted)' }}>
-                    {productCountMap[cat.id] ?? 0}
+                    {isSub ? directCountMap[cat.id] ?? 0 : totalCount(cat.id)}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-4">
+                      {!isSub && (
+                        <Link
+                          href={`/admin/categorias/nueva?parent=${cat.id}`}
+                          className="text-xs transition-opacity hover:opacity-70"
+                          style={{ color: 'var(--text-muted)' }}
+                        >
+                          + Subcategoría
+                        </Link>
+                      )}
                       <Link
                         href={`/admin/categorias/${cat.id}/editar`}
                         className="text-xs transition-opacity hover:opacity-70"

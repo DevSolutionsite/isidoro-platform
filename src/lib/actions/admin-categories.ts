@@ -8,8 +8,9 @@ export async function createCategory(formData: FormData) {
   const supabase = await createClient()
   const name = formData.get('name') as string
   const sort_order = parseInt(formData.get('sort_order') as string, 10) || 0
+  const parent_category_id = (formData.get('parent_category_id') as string) || null
 
-  const { error } = await supabase.from('categories').insert({ name, sort_order })
+  const { error } = await supabase.from('categories').insert({ name, sort_order, parent_category_id })
   if (error) throw new Error(error.message)
 
   updateTag('categories')
@@ -20,8 +21,12 @@ export async function updateCategory(id: string, formData: FormData) {
   const supabase = await createClient()
   const name = formData.get('name') as string
   const sort_order = parseInt(formData.get('sort_order') as string, 10) || 0
+  const parent_category_id = (formData.get('parent_category_id') as string) || null
 
-  const { error } = await supabase.from('categories').update({ name, sort_order }).eq('id', id)
+  const { error } = await supabase
+    .from('categories')
+    .update({ name, sort_order, parent_category_id })
+    .eq('id', id)
   if (error) throw new Error(error.message)
 
   updateTag('categories')
