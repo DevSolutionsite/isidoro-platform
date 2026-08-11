@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { formatARS } from '@/lib/utils'
+import { maybeConvertHeicToJpeg } from '@/lib/convertHeic'
 import type { Product, Category } from '@/lib/types'
 import type { ProductActionState } from '@/lib/actions/admin-products'
 
@@ -31,6 +32,7 @@ export function ProductForm({ product, categories, action, mode }: ProductFormPr
   const [state, formAction, pending] = useActionState<ProductActionState, FormData>(action, {})
   const [fileError, setFileError] = useState<string | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(product?.image_url ?? null)
+  const [converting, setConverting] = useState(false)
 
   useEffect(() => {
     return () => {
@@ -40,22 +42,38 @@ export function ProductForm({ product, categories, action, mode }: ProductFormPr
     }
   }, [previewUrl])
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const input = e.target
+    let file = input.files?.[0]
     if (!file) return
+
+    setFileError(null)
+    setConverting(true)
+    try {
+      file = await maybeConvertHeicToJpeg(file)
+    } catch {
+      setFileError('No se pudo convertir la imagen HEIC. Probá exportarla como JPEG desde el teléfono.')
+      setConverting(false)
+      input.value = ''
+      return
+    }
+    setConverting(false)
 
     if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
       setFileError('Formato no soportado. Usá PNG, JPEG o WebP.')
-      e.target.value = ''
+      input.value = ''
       return
     }
     if (file.size > MAX_IMAGE_BYTES) {
       setFileError('La imagen supera el límite de 5MB.')
-      e.target.value = ''
+      input.value = ''
       return
     }
 
-    setFileError(null)
+    const dt = new DataTransfer()
+    dt.items.add(file)
+    input.files = dt.files
+
     if (previewUrl && previewUrl.startsWith('blob:')) {
       URL.revokeObjectURL(previewUrl)
     }
@@ -220,13 +238,14 @@ export function ProductForm({ product, categories, action, mode }: ProductFormPr
           id="image_file"
           name="image_file"
           type="file"
-          accept="image/png,image/jpeg,image/webp"
+          accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif"
           onChange={handleFileChange}
+          disabled={converting}
           className={inputClass}
           style={inputStyle}
         />
         <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
-          PNG, JPEG o WebP — máximo 5MB.
+          {converting ? 'Convirtiendo imagen…' : 'PNG, JPEG o WebP — máximo 5MB. HEIC (iPhone) se convierte automáticamente.'}
         </p>
       </div>
 
@@ -248,7 +267,7 @@ export function ProductForm({ product, categories, action, mode }: ProductFormPr
       <div className="flex items-center gap-3 pt-2">
         <button
           type="submit"
-          disabled={pending}
+          disabled={pending || converting}
           className="px-5 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
           style={{ background: 'var(--brand)', color: 'var(--background)' }}
         >

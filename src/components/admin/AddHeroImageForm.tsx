@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { maybeConvertHeicToJpeg } from '@/lib/convertHeic'
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 const ACCEPTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp']
@@ -14,23 +15,40 @@ export function AddHeroImageForm({ action }: AddHeroImageFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [fileError, setFileError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  const [converting, setConverting] = useState(false)
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const input = e.target
+    let file = input.files?.[0]
     if (!file) return
+
+    setFileError(null)
+    setConverting(true)
+    try {
+      file = await maybeConvertHeicToJpeg(file)
+    } catch {
+      setFileError('No se pudo convertir la imagen HEIC. Probá exportarla como JPEG desde el teléfono.')
+      setConverting(false)
+      input.value = ''
+      return
+    }
+    setConverting(false)
 
     if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
       setFileError('Formato no soportado. Usá PNG, JPEG o WebP.')
-      e.target.value = ''
+      input.value = ''
       return
     }
     if (file.size > MAX_IMAGE_BYTES) {
       setFileError('La imagen supera el límite de 5MB.')
-      e.target.value = ''
+      input.value = ''
       return
     }
 
-    setFileError(null)
+    const dt = new DataTransfer()
+    dt.items.add(file)
+    input.files = dt.files
+
     setPending(true)
     formRef.current?.requestSubmit()
   }
@@ -47,23 +65,23 @@ export function AddHeroImageForm({ action }: AddHeroImageFormProps) {
           ref={fileInputRef}
           type="file"
           name="image_file"
-          accept="image/png,image/jpeg,image/webp"
+          accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif"
           required
           onChange={handleFileChange}
           className="hidden"
         />
         <button
           type="button"
-          disabled={pending}
+          disabled={pending || converting}
           onClick={() => fileInputRef.current?.click()}
           className="px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-opacity hover:opacity-80 disabled:opacity-50"
           style={{ background: 'var(--brand)', color: 'var(--background)' }}
         >
-          {pending ? 'Subiendo…' : '+ Agregar imagen'}
+          {converting ? 'Convirtiendo…' : pending ? 'Subiendo…' : '+ Agregar imagen'}
         </button>
       </form>
       <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
-        PNG, JPEG o WebP — máximo 5MB. Si no cargás ninguna, la landing muestra fotos genéricas de referencia.
+        PNG, JPEG o WebP — máximo 5MB. HEIC (iPhone) se convierte automáticamente. Si no cargás ninguna, la landing muestra fotos genéricas de referencia.
       </p>
     </div>
   )
