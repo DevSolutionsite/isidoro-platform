@@ -1,11 +1,13 @@
 'use client'
 
+import { useActionState } from 'react'
 import Link from 'next/link'
 import type { Reward } from '@/lib/types'
+import type { RewardActionState } from '@/lib/actions/admin-rewards'
 
 interface RewardFormProps {
   reward?: Reward
-  action: (formData: FormData) => Promise<void>
+  action: (prevState: RewardActionState, formData: FormData) => Promise<RewardActionState>
   mode: 'create' | 'edit'
 }
 
@@ -19,8 +21,19 @@ const labelClass = 'block text-xs font-medium mb-1.5'
 const labelStyle = { color: 'var(--text-muted)' }
 
 export function RewardForm({ reward, action, mode }: RewardFormProps) {
+  const [state, formAction, pending] = useActionState<RewardActionState, FormData>(action, {})
+
   return (
-    <form action={action} className="space-y-5 max-w-lg">
+    <form action={formAction} className="space-y-5 max-w-lg">
+      {state.error && (
+        <div
+          className="px-4 py-3 rounded-lg text-sm font-medium"
+          style={{ background: 'rgba(220,38,38,0.1)', color: '#dc2626', border: '1px solid rgba(220,38,38,0.3)' }}
+        >
+          {state.error}
+        </div>
+      )}
+
       {/* Nombre */}
       <div>
         <label htmlFor="name" className={labelClass} style={labelStyle}>
@@ -108,10 +121,11 @@ export function RewardForm({ reward, action, mode }: RewardFormProps) {
       <div className="flex items-center gap-3 pt-2">
         <button
           type="submit"
-          className="px-5 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-80"
+          disabled={pending}
+          className="px-5 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
           style={{ background: 'var(--brand)', color: 'var(--background)' }}
         >
-          {mode === 'create' ? 'Crear recompensa' : 'Guardar cambios'}
+          {pending ? 'Guardando...' : mode === 'create' ? 'Crear recompensa' : 'Guardar cambios'}
         </button>
         <Link
           href="/admin/recompensas"

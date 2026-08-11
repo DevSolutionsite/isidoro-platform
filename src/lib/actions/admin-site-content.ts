@@ -1,6 +1,5 @@
 'use server'
 
-import { redirect } from 'next/navigation'
 import { updateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -12,6 +11,9 @@ const ALLOWED_IMAGE_TYPES: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/webp': 'webp',
 }
+
+export type SiteContentActionResult = { ok: true } | { ok: false; code: string }
+export type AddHeroImageResult = { ok: true; url: string } | { ok: false; code: string }
 
 // URLs públicas del bucket tienen forma:
 // https://<project>.supabase.co/storage/v1/object/public/hero-images/<path>
@@ -56,16 +58,16 @@ async function getSiteContentRow(supabase: SupabaseClient) {
   return data as { id: string; hero_images: string[] }
 }
 
-export async function addHeroImage(formData: FormData) {
+export async function addHeroImage(formData: FormData): Promise<AddHeroImageResult> {
   const supabase = await createClient()
   const imageFile = formData.get('image_file') as File | null
   if (!imageFile || imageFile.size === 0) {
-    redirect('/admin/inicio?error=missing_file')
+    return { ok: false, code: 'missing_file' }
   }
 
   const result = await uploadHeroImage(supabase, imageFile)
   if ('error' in result) {
-    redirect(`/admin/inicio?error=${encodeURIComponent(result.error)}`)
+    return { ok: false, code: result.error }
   }
 
   const row = await getSiteContentRow(supabase)
@@ -78,10 +80,10 @@ export async function addHeroImage(formData: FormData) {
   if (error) throw new Error(error.message)
 
   updateTag('site-content')
-  redirect('/admin/inicio?success=added')
+  return { ok: true, url: result.url }
 }
 
-export async function removeHeroImage(url: string) {
+export async function removeHeroImage(url: string): Promise<SiteContentActionResult> {
   const supabase = await createClient()
   const row = await getSiteContentRow(supabase)
   const hero_images = row.hero_images.filter((img) => img !== url)
@@ -98,17 +100,20 @@ export async function removeHeroImage(url: string) {
   }
 
   updateTag('site-content')
-  redirect('/admin/inicio?success=removed')
+  return { ok: true }
 }
 
-export async function moveHeroImage(index: number, direction: 'up' | 'down') {
+export async function moveHeroImage(
+  index: number,
+  direction: 'up' | 'down'
+): Promise<SiteContentActionResult> {
   const supabase = await createClient()
   const row = await getSiteContentRow(supabase)
   const hero_images = [...row.hero_images]
 
   const target = direction === 'up' ? index - 1 : index + 1
   if (target < 0 || target >= hero_images.length) {
-    redirect('/admin/inicio')
+    return { ok: true }
   }
 
   const [moved] = hero_images.splice(index, 1)
@@ -121,10 +126,10 @@ export async function moveHeroImage(index: number, direction: 'up' | 'down') {
   if (error) throw new Error(error.message)
 
   updateTag('site-content')
-  redirect('/admin/inicio')
+  return { ok: true }
 }
 
-export async function updateHours(formData: FormData) {
+export async function updateHours(formData: FormData): Promise<SiteContentActionResult> {
   const supabase = await createClient()
   const hours_text = (formData.get('hours_text') as string).trim() || null
 
@@ -136,5 +141,5 @@ export async function updateHours(formData: FormData) {
   if (error) throw new Error(error.message)
 
   updateTag('site-content')
-  redirect('/admin/inicio?success=updated')
+  return { ok: true }
 }

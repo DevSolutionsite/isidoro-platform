@@ -1,10 +1,16 @@
 'use server'
 
-import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import type { SplitConsumptionResponse } from '@/lib/types'
+import type { ConfirmRedemptionResponse, SplitConsumptionResponse } from '@/lib/types'
 
-export async function registrarConsumo(clientId: string, formData: FormData) {
+export type RegistrarConsumoResult =
+  | { ok: true; data: { points_earned: number } }
+  | { ok: false; code: string }
+
+export async function registrarConsumo(
+  clientId: string,
+  formData: FormData
+): Promise<RegistrarConsumoResult> {
   const supabase = await createClient()
   const amount = parseFloat(formData.get('amount') as string)
   const notes = (formData.get('notes') as string) || undefined
@@ -22,17 +28,18 @@ export async function registrarConsumo(clientId: string, formData: FormData) {
         errorCode = body?.code ?? 'unknown'
       } catch { /* ignore */ }
     }
-    redirect(`/caja?clientId=${clientId}&error=${encodeURIComponent(errorCode)}`)
+    return { ok: false, code: errorCode }
   }
 
-  redirect(`/caja?done=${clientId}&pts=${data.points_earned}`)
+  return { ok: true, data: { points_earned: data.points_earned } }
 }
 
-export async function confirmarCanje(formData: FormData) {
+export type ConfirmarCanjeResult =
+  | { ok: true; data: ConfirmRedemptionResponse }
+  | { ok: false; code: string }
+
+export async function confirmarCanje(code: string): Promise<ConfirmarCanjeResult> {
   const supabase = await createClient()
-  const digits = ['d0', 'd1', 'd2', 'd3', 'd4', 'd5']
-    .map((k) => (formData.get(k) as string | null) ?? '')
-  const code = digits.join('').trim()
 
   const { data, error } = await supabase.functions.invoke('confirm-redemption', {
     body: { code },
@@ -46,12 +53,10 @@ export async function confirmarCanje(formData: FormData) {
         errorCode = body?.code ?? 'unknown'
       } catch { /* ignore */ }
     }
-    redirect(`/caja/canje?error=${encodeURIComponent(errorCode)}`)
+    return { ok: false, code: errorCode }
   }
 
-  redirect(
-    `/caja/canje?done=1&reward=${encodeURIComponent(data.reward_name)}&pts=${data.points_used}&balance=${data.client_new_balance}`
-  )
+  return { ok: true, data: data as ConfirmRedemptionResponse }
 }
 
 export type ClienteBusqueda = {

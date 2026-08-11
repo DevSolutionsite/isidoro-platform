@@ -4,7 +4,6 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { PointsAdjustForm } from '@/components/admin/PointsAdjustForm'
 import { adjustPoints } from '@/lib/actions/admin-clients'
-import { SuccessBanner } from '@/components/admin/SuccessBanner'
 import { formatARS } from '@/lib/utils'
 
 export const metadata: Metadata = { title: 'Detalle cliente — Admin Isidoro' }
@@ -29,13 +28,10 @@ function formatDate(iso: string) {
 
 export default async function ClienteDetallePage({
   params,
-  searchParams,
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ success?: string; error?: string }>
 }) {
   const { id } = await params
-  const { success, error } = await searchParams
 
   const supabase = await createClient()
 
@@ -56,7 +52,6 @@ export default async function ClienteDetallePage({
 
   return (
     <div>
-      {success === 'adjusted' && <SuccessBanner type="updated" />}
       <div className="px-8 py-6 space-y-8">
         <Link
           href="/admin/clientes"
@@ -196,7 +191,7 @@ export default async function ClienteDetallePage({
           <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
             Usar para correcciones de caja, cortesías o reversiones. Queda registrado con nota.
           </p>
-          <PointsAdjustForm action={adjustPoints.bind(null, id)} errorCode={error} />
+          <PointsAdjustForm action={adjustPoints.bind(null, id)} />
         </section>
       </div>
     </div>

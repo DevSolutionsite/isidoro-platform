@@ -20,10 +20,9 @@ export default async function PerfilPage({
     expires?:       string
     reward?:        string
     redemption_id?: string
-    canje_error?:   string
   }>
 }) {
-  const { code, expires, reward, redemption_id, canje_error } = await searchParams
+  const { code, expires, reward, redemption_id } = await searchParams
   const supabase = await createClient()
   const {
     data: { user },
@@ -95,7 +94,6 @@ export default async function PerfilPage({
         <RewardsList
           rewards={affordableRewards}
           totalPoints={totalPoints}
-          errorCode={canje_error}
         />
       )}
 

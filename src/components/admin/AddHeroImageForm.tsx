@@ -2,16 +2,21 @@
 
 import { useRef, useState } from 'react'
 import { maybeConvertHeicToJpeg } from '@/lib/convertHeic'
+import type { AddHeroImageResult } from '@/lib/actions/admin-site-content'
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 const ACCEPTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp']
 
-interface AddHeroImageFormProps {
-  action: (formData: FormData) => Promise<void>
+const ERROR_MESSAGES: Record<string, string> = {
+  missing_file: 'Seleccioná una imagen para agregar.',
 }
 
-export function AddHeroImageForm({ action }: AddHeroImageFormProps) {
-  const formRef = useRef<HTMLFormElement>(null)
+interface AddHeroImageFormProps {
+  action: (formData: FormData) => Promise<AddHeroImageResult>
+  onAdded: (url: string) => void
+}
+
+export function AddHeroImageForm({ action, onAdded }: AddHeroImageFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [fileError, setFileError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
@@ -45,12 +50,20 @@ export function AddHeroImageForm({ action }: AddHeroImageFormProps) {
       return
     }
 
-    const dt = new DataTransfer()
-    dt.items.add(file)
-    input.files = dt.files
-
     setPending(true)
-    formRef.current?.requestSubmit()
+    try {
+      const formData = new FormData()
+      formData.set('image_file', file)
+      const res = await action(formData)
+      if (!res.ok) {
+        setFileError(ERROR_MESSAGES[res.code] ?? res.code)
+        return
+      }
+      onAdded(res.url)
+    } finally {
+      setPending(false)
+      input.value = ''
+    }
   }
 
   return (
@@ -60,7 +73,7 @@ export function AddHeroImageForm({ action }: AddHeroImageFormProps) {
           {fileError}
         </p>
       )}
-      <form ref={formRef} action={action} className="flex items-center gap-3">
+      <div className="flex items-center gap-3">
         <input
           ref={fileInputRef}
           type="file"
@@ -79,7 +92,7 @@ export function AddHeroImageForm({ action }: AddHeroImageFormProps) {
         >
           {converting ? 'Convirtiendo…' : pending ? 'Subiendo…' : '+ Agregar imagen'}
         </button>
-      </form>
+      </div>
       <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
         PNG, JPEG o WebP — máximo 5MB. HEIC (iPhone) se convierte automáticamente. Si no cargás ninguna, la landing muestra fotos genéricas de referencia.
       </p>

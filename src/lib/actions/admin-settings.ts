@@ -1,16 +1,17 @@
 'use server'
 
-import { redirect } from 'next/navigation'
 import { updateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 
-export async function updatePointsPerPeso(formData: FormData) {
+export type SettingsActionResult = { ok: true } | { ok: false; code: string }
+
+export async function updatePointsPerPeso(formData: FormData): Promise<SettingsActionResult> {
   const supabase = await createClient()
   const raw = formData.get('points_per_peso') as string
   const value = parseFloat(raw)
 
   if (isNaN(value) || value <= 0) {
-    redirect('/admin/inicio?error=invalid_points_per_peso')
+    return { ok: false, code: 'invalid_points_per_peso' }
   }
 
   const { data: row, error: fetchError } = await supabase
@@ -26,16 +27,18 @@ export async function updatePointsPerPeso(formData: FormData) {
   if (error) throw new Error(error.message)
 
   updateTag('settings')
-  redirect('/admin/inicio?success=updated')
+  return { ok: true }
 }
 
-export async function updateMaxConsumptionAmount(formData: FormData) {
+export async function updateMaxConsumptionAmount(
+  formData: FormData
+): Promise<SettingsActionResult> {
   const supabase = await createClient()
   const raw = formData.get('max_consumption_amount') as string
   const value = parseFloat(raw)
 
   if (isNaN(value) || value <= 0) {
-    redirect('/admin/inicio?error=invalid_max_consumption_amount')
+    return { ok: false, code: 'invalid_max_consumption_amount' }
   }
 
   const { data: row, error: fetchError } = await supabase
@@ -51,5 +54,5 @@ export async function updateMaxConsumptionAmount(formData: FormData) {
   if (error) throw new Error(error.message)
 
   updateTag('settings')
-  redirect('/admin/inicio?success=updated')
+  return { ok: true }
 }

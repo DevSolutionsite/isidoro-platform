@@ -33,7 +33,7 @@ export async function updateCategory(id: string, formData: FormData) {
   redirect('/admin/categorias?success=updated')
 }
 
-export async function deleteCategory(id: string) {
+export async function deleteCategory(id: string): Promise<{ ok: true } | { ok: false; code: string }> {
   const supabase = await createClient()
 
   const { error } = await supabase
@@ -43,5 +43,5 @@ export async function deleteCategory(id: string) {
   if (error) throw new Error(error.message)
 
   updateTag('categories')
-  redirect('/admin/categorias?success=deleted')
+  return { ok: true }
 }

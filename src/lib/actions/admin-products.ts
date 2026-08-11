@@ -121,7 +121,7 @@ export async function updateProduct(
   redirect('/admin/productos?success=updated')
 }
 
-export async function deleteProduct(id: string) {
+export async function deleteProduct(id: string): Promise<{ ok: true } | { ok: false; code: string }> {
   const supabase = await createClient()
 
   const { error } = await supabase
@@ -130,5 +130,5 @@ export async function deleteProduct(id: string) {
     .eq('id', id)
   if (error) throw new Error(error.message)
 
-  redirect('/admin/productos?success=deleted')
+  return { ok: true }
 }

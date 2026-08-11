@@ -1,8 +1,6 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 
 const AUTO_CLOSE_MS = 5000
 
@@ -10,21 +8,20 @@ interface Props {
   rewardName: string
   ptsUsed:    number
   newBalance: number
+  onConfirmarOtro: () => void
 }
 
-export function CanjeConfirmadoCard({ rewardName, ptsUsed, newBalance }: Props) {
-  const router = useRouter()
-
+export function CanjeConfirmadoCard({ rewardName, ptsUsed, newBalance, onConfirmarOtro }: Props) {
   useEffect(() => {
-    const id = setTimeout(() => router.push('/caja/canje'), AUTO_CLOSE_MS)
+    const id = setTimeout(onConfirmarOtro, AUTO_CLOSE_MS)
     return () => clearTimeout(id)
-  }, [router])
+  }, [onConfirmarOtro])
 
   return (
     <div className="space-y-4">
       {/* Success card */}
       <div
-        className="rounded-2xl px-5 py-6 text-center"
+        className="rounded-2xl px-5 py-6 text-center animate-confirmado"
         style={{
           background: 'rgba(202,158,105,0.12)',
           border: '1px solid rgba(202,158,105,0.35)',
@@ -63,8 +60,9 @@ export function CanjeConfirmadoCard({ rewardName, ptsUsed, newBalance }: Props) 
         </div>
       </div>
 
-      <Link
-        href="/caja/canje"
+      <button
+        type="button"
+        onClick={onConfirmarOtro}
         className="block w-full rounded-xl py-3.5 text-sm font-semibold text-center transition-opacity hover:opacity-80"
         style={{
           background: 'var(--surface)',
@@ -73,7 +71,7 @@ export function CanjeConfirmadoCard({ rewardName, ptsUsed, newBalance }: Props) 
         }}
       >
         Confirmar otro canje
-      </Link>
+      </button>
     </div>
   )
 }

@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { confirmarCanje, type ConfirmarCanjeResult } from '@/lib/actions/cajero'
+import { CanjeConfirmadoCard } from './CanjeConfirmadoCard'
 
 const ERROR_MESSAGES: Record<string, string> = {
   invalid_code_format: 'Código inválido — solo 6 dígitos numéricos',
@@ -11,45 +13,58 @@ const ERROR_MESSAGES: Record<string, string> = {
   unknown: 'Error inesperado — intentá de nuevo',
 }
 
-interface Props {
-  action: (formData: FormData) => Promise<void>
-  errorCode?: string
-}
-
-export function ConfirmarCanjeForm({ action, errorCode }: Props) {
+export function ConfirmarCanjeForm() {
   const [digits, setDigits] = useState(['', '', '', '', '', ''])
   const inputRefs = useRef<(HTMLInputElement | null)[]>([null, null, null, null, null, null])
-  const formRef = useRef<HTMLFormElement>(null)
 
   const isFull = digits.every((d) => d !== '')
-  const errorMsg = errorCode ? (ERROR_MESSAGES[errorCode] ?? ERROR_MESSAGES.unknown) : null
   const submittedRef = useRef(false)
   const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [result, setResult] = useState<Extract<ConfirmarCanjeResult, { ok: true }>['data'] | null>(
+    null
+  )
 
   // Auto-submit once all 6 digits are filled. Runs after React commits the
-  // digits state to the hidden inputs — calling requestSubmit() synchronously
-  // inside handleChange raced ahead of that commit and always submitted a
-  // stale/incomplete code (bug found during QA, 26 jul 2026).
+  // digits state, mismo fix que el auto-submit original (26 jul 2026).
   useEffect(() => {
     if (isFull && !submittedRef.current) {
       submittedRef.current = true
-      formRef.current?.requestSubmit()
+      handleSubmit()
     }
     if (!isFull) {
       submittedRef.current = false
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFull])
 
-  // Guard against a second submit (stray tap, Enter key) firing while the
-  // first request is still in flight: it would hit an already-confirmed
-  // redemption and show "código no encontrado" even though the first
-  // request already deducted the points (bug found 30 jul 2026).
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    if (submitting) {
-      e.preventDefault()
-      return
-    }
+  async function handleSubmit() {
+    if (submitting) return
     setSubmitting(true)
+    setSubmitError(null)
+
+    try {
+      const code = digits.join('')
+      const res = await confirmarCanje(code)
+
+      if (!res.ok) {
+        setSubmitError(ERROR_MESSAGES[res.code] ?? ERROR_MESSAGES.unknown)
+        setDigits(['', '', '', '', '', ''])
+        inputRefs.current[0]?.focus()
+        return
+      }
+
+      setResult(res.data)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  function reset() {
+    setDigits(['', '', '', '', '', ''])
+    setSubmitError(null)
+    setResult(null)
+    submittedRef.current = false
   }
 
   function handleChange(index: number, value: string) {
@@ -88,13 +103,19 @@ export function ConfirmarCanjeForm({ action, errorCode }: Props) {
     inputRefs.current[focusIdx]?.focus()
   }
 
-  return (
-    <form ref={formRef} action={action} onSubmit={handleSubmit} className="space-y-6">
-      {/* 6 hidden inputs that carry the actual form values */}
-      {digits.map((d, i) => (
-        <input key={i} type="hidden" name={`d${i}`} value={d} />
-      ))}
+  if (result) {
+    return (
+      <CanjeConfirmadoCard
+        rewardName={result.reward_name}
+        ptsUsed={result.points_used}
+        newBalance={result.client_new_balance}
+        onConfirmarOtro={reset}
+      />
+    )
+  }
 
+  return (
+    <div className="space-y-6">
       {/* OTP boxes */}
       <div>
         <p className="text-xs font-medium mb-4 text-center" style={{ color: 'var(--text-muted)' }}>
@@ -127,7 +148,7 @@ export function ConfirmarCanjeForm({ action, errorCode }: Props) {
       </div>
 
       {/* Error banner */}
-      {errorMsg && (
+      {submitError && (
         <div
           className="rounded-xl px-4 py-3 text-center text-sm"
           style={{
@@ -136,18 +157,19 @@ export function ConfirmarCanjeForm({ action, errorCode }: Props) {
             color: '#f87171',
           }}
         >
-          {errorMsg}
+          {submitError}
         </div>
       )}
 
       <button
-        type="submit"
+        type="button"
+        onClick={handleSubmit}
         disabled={!isFull || submitting}
         className="w-full rounded-xl py-3.5 text-sm font-bold tracking-wide transition-opacity hover:opacity-80 disabled:opacity-30"
         style={{ background: 'var(--brand)', color: 'var(--background)' }}
       >
         {submitting ? 'Confirmando...' : 'Confirmar canje'}
       </button>
-    </form>
+    </div>
   )
 }

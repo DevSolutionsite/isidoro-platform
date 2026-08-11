@@ -3,7 +3,19 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 
-export async function createReward(formData: FormData) {
+export interface RewardActionState {
+  error?: string
+}
+
+const VALIDATION_MESSAGES: Record<string, string> = {
+  invalid_points_cost: 'Ingresá un costo en puntos válido, mayor a 0.',
+  invalid_stock: 'Ingresá un stock válido (0 o más), o dejalo vacío para sin límite.',
+}
+
+export async function createReward(
+  _prevState: RewardActionState,
+  formData: FormData
+): Promise<RewardActionState> {
   const supabase = await createClient()
   const name = formData.get('name') as string
   const description = (formData.get('description') as string) || null
@@ -13,10 +25,10 @@ export async function createReward(formData: FormData) {
   const is_active = formData.get('is_active') === 'on'
 
   if (isNaN(points_cost) || points_cost <= 0) {
-    redirect('/admin/recompensas/nueva?error=invalid_points_cost')
+    return { error: VALIDATION_MESSAGES.invalid_points_cost }
   }
   if (stock !== null && (isNaN(stock) || stock < 0)) {
-    redirect('/admin/recompensas/nueva?error=invalid_stock')
+    return { error: VALIDATION_MESSAGES.invalid_stock }
   }
 
   const { error } = await supabase
@@ -27,7 +39,11 @@ export async function createReward(formData: FormData) {
   redirect('/admin/recompensas?success=created')
 }
 
-export async function updateReward(id: string, formData: FormData) {
+export async function updateReward(
+  id: string,
+  _prevState: RewardActionState,
+  formData: FormData
+): Promise<RewardActionState> {
   const supabase = await createClient()
   const name = formData.get('name') as string
   const description = (formData.get('description') as string) || null
@@ -37,10 +53,10 @@ export async function updateReward(id: string, formData: FormData) {
   const is_active = formData.get('is_active') === 'on'
 
   if (isNaN(points_cost) || points_cost <= 0) {
-    redirect(`/admin/recompensas/${id}/editar?error=invalid_points_cost`)
+    return { error: VALIDATION_MESSAGES.invalid_points_cost }
   }
   if (stock !== null && (isNaN(stock) || stock < 0)) {
-    redirect(`/admin/recompensas/${id}/editar?error=invalid_stock`)
+    return { error: VALIDATION_MESSAGES.invalid_stock }
   }
 
   const { error } = await supabase
@@ -52,7 +68,7 @@ export async function updateReward(id: string, formData: FormData) {
   redirect('/admin/recompensas?success=updated')
 }
 
-export async function deleteReward(id: string) {
+export async function deleteReward(id: string): Promise<{ ok: true } | { ok: false; code: string }> {
   const supabase = await createClient()
 
   const { error } = await supabase
@@ -61,5 +77,5 @@ export async function deleteReward(id: string) {
     .eq('id', id)
   if (error) throw new Error(error.message)
 
-  redirect('/admin/recompensas?success=deleted')
+  return { ok: true }
 }

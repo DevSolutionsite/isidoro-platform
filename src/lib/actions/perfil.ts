@@ -4,10 +4,17 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import type { InitiateRedemptionResponse } from '@/lib/types'
 
-export async function iniciarCanje(formData: FormData) {
-  const rewardId   = formData.get('reward_id')   as string
-  const rewardName = formData.get('reward_name')  as string
+export type IniciarCanjeResult = { ok: false; code: string }
 
+// El camino de éxito sigue haciendo redirect() a propósito: el código de 6
+// dígitos tiene que sobrevivir un refresh de página (los puntos ya se
+// descontaron server-side), y solo la URL garantiza eso hoy. El camino de
+// error no tiene ese requisito — un error es transitorio, no hace falta
+// pagar una navegación completa solo para mostrarlo.
+export async function iniciarCanje(
+  rewardId: string,
+  rewardName: string,
+): Promise<IniciarCanjeResult> {
   const supabase = await createClient()
 
   const { data, error } = await supabase.functions.invoke<InitiateRedemptionResponse>(
@@ -23,7 +30,7 @@ export async function iniciarCanje(formData: FormData) {
         errorCode = body?.code ?? 'unknown'
       } catch { /* ignore */ }
     }
-    redirect(`/perfil?canje_error=${encodeURIComponent(errorCode)}`)
+    return { ok: false, code: errorCode }
   }
 
   redirect(

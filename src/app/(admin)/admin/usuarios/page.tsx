@@ -1,25 +1,18 @@
 import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { ClientSearch } from '@/components/admin/ClientSearch'
-import { SuccessBanner } from '@/components/admin/SuccessBanner'
 import { UserRoleForm } from '@/components/admin/UserRoleForm'
 import { Suspense } from 'react'
 
 export const metadata: Metadata = { title: 'Usuarios — Admin Isidoro' }
 
-const ERROR_MESSAGES: Record<string, string> = {
-  invalid_role: 'Rol inválido.',
-  cannot_edit_self: 'No podés cambiar tu propio rol desde acá — pedile a otro admin que lo haga.',
-}
-
 export default async function UsuariosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; success?: string; error?: string }>
+  searchParams: Promise<{ q?: string }>
 }) {
-  const { q, success, error } = await searchParams
+  const { q } = await searchParams
   const query = q?.trim() ?? ''
-  const errorMessage = error ? (ERROR_MESSAGES[error] ?? decodeURIComponent(error)) : null
 
   const supabase = await createClient()
 
@@ -47,16 +40,6 @@ export default async function UsuariosPage({
 
   return (
     <div>
-      <SuccessBanner type={success} />
-      {errorMessage && (
-        <div
-          className="px-6 py-3 text-sm font-medium"
-          style={{ background: 'rgba(220,38,38,0.1)', color: '#dc2626', borderBottom: '1px solid rgba(220,38,38,0.3)' }}
-        >
-          {errorMessage}
-        </div>
-      )}
-
       <div className="px-8 py-6">
         <div className="mb-6">
           <h1 className="text-2xl font-semibold font-display" style={{ color: 'var(--foreground)' }}>

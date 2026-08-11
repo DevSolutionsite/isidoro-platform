@@ -70,7 +70,7 @@ export async function updateTimeOffer(id: string, formData: FormData) {
   redirect('/admin/ofertas?success=updated')
 }
 
-export async function deleteTimeOffer(id: string) {
+export async function deleteTimeOffer(id: string): Promise<{ ok: true } | { ok: false; code: string }> {
   const supabase = await createClient()
 
   const { error } = await supabase
@@ -79,5 +79,5 @@ export async function deleteTimeOffer(id: string) {
     .eq('id', id)
   if (error) throw new Error(error.message)
 
-  redirect('/admin/ofertas?success=deleted')
+  return { ok: true }
 }

@@ -1,9 +1,10 @@
 'use server'
 
-import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 
-export async function adjustPoints(clientId: string, formData: FormData) {
+export type AdjustPointsResult = { ok: true } | { ok: false; code: string }
+
+export async function adjustPoints(clientId: string, formData: FormData): Promise<AdjustPointsResult> {
   const supabase = await createClient()
   const points = parseInt(formData.get('points') as string, 10)
   const notes = formData.get('note') as string
@@ -20,8 +21,8 @@ export async function adjustPoints(clientId: string, formData: FormData) {
         errorCode = body?.code ?? 'unknown'
       } catch { /* ignore */ }
     }
-    redirect(`/admin/clientes/${clientId}?error=${encodeURIComponent(errorCode)}`)
+    return { ok: false, code: errorCode }
   }
 
-  redirect(`/admin/clientes/${clientId}?success=adjusted`)
+  return { ok: true }
 }

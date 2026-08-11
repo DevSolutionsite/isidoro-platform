@@ -20,6 +20,16 @@ export function CodigoCanjeCard({ id, code, expiresAt, rewardName }: Props) {
   )
   const [serverStatus, setServerStatus] = useState<'pending' | 'confirmed' | 'expired'>('pending')
 
+  // Popup fixed inset-0: bloquea el scroll del fondo mientras está montado,
+  // restaura el valor previo (no '' a secas) al desmontar/cerrarse.
+  useEffect(() => {
+    const original = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = original
+    }
+  }, [])
+
   useEffect(() => {
     if (secondsLeft <= 0) return
     const timerId = setInterval(() => {

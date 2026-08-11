@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useFormStatus } from 'react-dom'
 import type { Reward } from '@/lib/types'
 import { iniciarCanje } from '@/lib/actions/perfil'
 
@@ -10,43 +9,37 @@ const CANJE_ERROR_MESSAGES: Record<string, string> = {
   out_of_stock:        'Sin stock disponible para esta recompensa',
   reward_inactive:     'Esta recompensa ya no está disponible',
   reward_not_found:    'Recompensa no encontrada',
-  unknown:             'Error inesperado — intentá de nuevo',
+  unknown:              'Error inesperado — intentá de nuevo',
 }
 
 type Props = {
   rewards:    Reward[]
   totalPoints: number
-  errorCode?:  string
 }
 
-// useFormStatus solo ve el pending de SU form (el que se tocó). El prop
-// `locked` cubre el caso de otro botón: si ya hay un canje de OTRA reward
-// en vuelo, este botón también se deshabilita para evitar que un segundo
-// tap dispare un segundo canje mientras el primero todavía viaja.
-function SubmitButton({ locked }: { locked: boolean }) {
-  const { pending } = useFormStatus()
-
-  return (
-    <button
-      type="submit"
-      disabled={pending || locked}
-      className="text-xs font-semibold px-3 py-1.5 rounded-full transition-opacity hover:opacity-80 disabled:opacity-30"
-      style={{
-        background: 'var(--brand-dark)',
-        color:      'var(--background)',
-      }}
-    >
-      {pending ? 'Canjeando...' : 'Canjear'}
-    </button>
-  )
-}
-
-export function RewardsList({ rewards, totalPoints, errorCode }: Props) {
+export function RewardsList({ rewards, totalPoints }: Props) {
   const [pendingRewardId, setPendingRewardId] = useState<string | null>(null)
+  const [errorCode, setErrorCode] = useState<string | null>(null)
 
   const errorMsg = errorCode
     ? (CANJE_ERROR_MESSAGES[errorCode] ?? CANJE_ERROR_MESSAGES.unknown)
     : null
+
+  async function handleCanjear(reward: Reward) {
+    if (pendingRewardId) return
+    setPendingRewardId(reward.id)
+    setErrorCode(null)
+
+    try {
+      const res = await iniciarCanje(reward.id, reward.name)
+      // Camino de éxito no vuelve acá: iniciarCanje hace redirect().
+      if (!res.ok) {
+        setErrorCode(res.code)
+      }
+    } finally {
+      setPendingRewardId(null)
+    }
+  }
 
   return (
     <div
@@ -76,6 +69,7 @@ export function RewardsList({ rewards, totalPoints, errorCode }: Props) {
       <ul className="space-y-3">
         {rewards.map((reward) => {
           const canAfford = totalPoints >= reward.points_cost
+          const pending = pendingRewardId === reward.id
           return (
             <li key={reward.id} className="flex items-center justify-between gap-3">
               <div className="min-w-0">
@@ -99,16 +93,18 @@ export function RewardsList({ rewards, totalPoints, errorCode }: Props) {
                 </span>
 
                 {canAfford && (
-                  <form
-                    action={iniciarCanje}
-                    onSubmit={() => setPendingRewardId(reward.id)}
+                  <button
+                    type="button"
+                    onClick={() => handleCanjear(reward)}
+                    disabled={pendingRewardId !== null}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-full transition-opacity hover:opacity-80 disabled:opacity-30"
+                    style={{
+                      background: 'var(--brand-dark)',
+                      color:      'var(--background)',
+                    }}
                   >
-                    <input type="hidden" name="reward_id"   value={reward.id} />
-                    <input type="hidden" name="reward_name" value={reward.name} />
-                    <SubmitButton
-                      locked={pendingRewardId !== null && pendingRewardId !== reward.id}
-                    />
-                  </form>
+                    {pending ? 'Canjeando...' : 'Canjear'}
+                  </button>
                 )}
               </div>
             </li>

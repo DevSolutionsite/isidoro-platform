@@ -36,7 +36,7 @@ export async function updatePromotion(id: string, formData: FormData) {
   redirect('/admin/promociones?success=updated')
 }
 
-export async function deletePromotion(id: string) {
+export async function deletePromotion(id: string): Promise<{ ok: true } | { ok: false; code: string }> {
   const supabase = await createClient()
 
   const { error } = await supabase
@@ -45,5 +45,5 @@ export async function deletePromotion(id: string) {
     .eq('id', id)
   if (error) throw new Error(error.message)
 
-  redirect('/admin/promociones?success=deleted')
+  return { ok: true }
 }

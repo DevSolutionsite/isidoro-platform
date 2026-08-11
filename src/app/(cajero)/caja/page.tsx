@@ -11,19 +11,12 @@ import { EscanearQRButtonCaja } from '@/components/cajero/EscanearQRButtonCaja'
 
 export const metadata: Metadata = { title: 'Caja — Isidoro' }
 
-const ERROR_MESSAGES: Record<string, string> = {
-  amount_too_large: 'El monto supera el máximo permitido por operación.',
-  invalid_amount: 'El monto ingresado no es válido.',
-  client_not_found: 'El cliente ya no existe — buscalo de nuevo.',
-  unauthorized_cashier: 'No tenés permiso para registrar consumos.',
-}
-
 export default async function CajaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; clientId?: string; done?: string; pts?: string; error?: string }>
+  searchParams: Promise<{ q?: string; clientId?: string }>
 }) {
-  const { q, clientId, done, pts, error: errorCode } = await searchParams
+  const { q, clientId } = await searchParams
   const query = q?.trim() ?? ''
 
   const supabase = await createClient()
@@ -31,17 +24,6 @@ export default async function CajaPage({
   const settings = await getCachedSettings()
   const pointsPerPeso = settings?.points_per_peso ?? 1
   const maxAmount = settings?.max_consumption_amount ?? 1000000
-
-  // Done client lookup for success banner
-  let doneClient: { full_name: string } | null = null
-  if (done) {
-    const { data } = await supabase
-      .from('profiles')
-      .select('full_name')
-      .eq('id', done)
-      .maybeSingle()
-    doneClient = data
-  }
 
   // Client search: explicit selection (clientId) > exact QR match > name matches list
   let foundClient: { id: string; full_name: string; phone: string | null } | null = null
@@ -87,40 +69,9 @@ export default async function CajaPage({
     foundBalance = balance
   }
 
-  const ptsEarned = pts ? parseInt(pts, 10) : 0
-
   return (
     <div className="space-y-6">
       <CajaTabs active="consumo" />
-
-      {/* Error banner */}
-      {errorCode && (
-        <div
-          className="rounded-2xl px-5 py-4 text-center text-sm"
-          style={{ background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.30)', color: '#f87171' }}
-        >
-          {ERROR_MESSAGES[errorCode] ?? 'Error inesperado — intentá de nuevo.'}
-        </div>
-      )}
-
-      {/* Success banner */}
-      {doneClient && (
-        <div
-          className="rounded-2xl px-5 py-4 text-center"
-          style={{ background: 'rgba(202,158,105,0.12)', border: '1px solid rgba(202,158,105,0.35)' }}
-        >
-          <p className="text-2xl mb-1">✓</p>
-          <p className="font-semibold text-sm" style={{ color: 'var(--brand)' }}>
-            Consumo registrado
-          </p>
-          <p className="text-sm mt-1" style={{ color: 'var(--foreground)' }}>
-            <span className="font-medium">{doneClient.full_name}</span> recibió{' '}
-            <span className="font-bold" style={{ color: 'var(--brand)' }}>
-              +{ptsEarned} pts
-            </span>
-          </p>
-        </div>
-      )}
 
       {/* Search */}
       <div>
@@ -236,13 +187,13 @@ export default async function CajaPage({
             clientName={foundClient.full_name}
             pointsPerPeso={pointsPerPeso}
             maxAmount={maxAmount}
-            action={registrarConsumo.bind(null, foundClient.id)}
+            action={registrarConsumo}
           />
         </div>
       )}
 
       {/* Empty state */}
-      {!query && !doneClient && (
+      {!query && (
         <div
           className="rounded-2xl px-5 py-10 text-center"
           style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
