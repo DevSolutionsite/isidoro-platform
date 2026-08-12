@@ -96,7 +96,7 @@ export function ProductFilters({
           }
           return (
             <optgroup key={cat.id} label={cat.name}>
-              <option value={cat.id}>{cat.name}</option>
+              <option value={cat.id}>{cat.name} (sin subcategoría)</option>
               {subcats.map((sub) => (
                 <option key={sub.id} value={sub.id}>
                   {sub.name}
