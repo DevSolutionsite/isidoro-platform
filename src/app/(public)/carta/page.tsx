@@ -63,6 +63,7 @@ export default async function CartaPage() {
       .from('products')
       .select('*, categories(name, sort_order)')
       .eq('is_available', true)
+      .is('deleted_at', null)
       .order('sort_order', { ascending: true }),
     supabase.from('promotions').select('*').eq('is_active', true),
     supabase
