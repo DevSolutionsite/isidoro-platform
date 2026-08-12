@@ -1,7 +1,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
-import { updateTag } from 'next/cache'
+import { revalidateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 
 export async function createCategory(formData: FormData) {
@@ -13,7 +13,7 @@ export async function createCategory(formData: FormData) {
   const { error } = await supabase.from('categories').insert({ name, sort_order, parent_category_id })
   if (error) throw new Error(error.message)
 
-  updateTag('categories')
+  revalidateTag('categories', { expire: 0 })
   redirect('/admin/categorias?success=created')
 }
 
@@ -29,7 +29,7 @@ export async function updateCategory(id: string, formData: FormData) {
     .eq('id', id)
   if (error) throw new Error(error.message)
 
-  updateTag('categories')
+  revalidateTag('categories', { expire: 0 })
   redirect('/admin/categorias?success=updated')
 }
 
@@ -42,6 +42,6 @@ export async function deleteCategory(id: string): Promise<{ ok: true } | { ok: f
     .eq('id', id)
   if (error) throw new Error(error.message)
 
-  updateTag('categories')
+  revalidateTag('categories', { expire: 0 })
   return { ok: true }
 }

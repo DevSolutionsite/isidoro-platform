@@ -207,7 +207,11 @@ export default async function CartaPage() {
                 )}
 
                 {subcategoryGroups.map(({ subcategory, products: subProducts }) => (
-                  <div key={subcategory.id} className="mt-6">
+                  <div
+                    key={subcategory.id}
+                    id={`section-${slugify(subcategory.name)}`}
+                    className="mt-6 scroll-mt-16"
+                  >
                     <h3
                       className="px-4 pb-3 text-base font-semibold"
                       style={{ color: 'var(--brand)' }}

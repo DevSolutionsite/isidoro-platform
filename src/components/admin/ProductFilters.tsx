@@ -3,7 +3,7 @@
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useRef } from 'react'
 
-type Category = { id: string; name: string }
+type Category = { id: string; name: string; parent_category_id: string | null }
 
 export function ProductFilters({
   categories,
@@ -37,6 +37,12 @@ export function ProductFilters({
 
   function handleCategoriaChange(e: React.ChangeEvent<HTMLSelectElement>) {
     updateParam('categoria', e.target.value)
+  }
+
+  const topLevelCategories = categories.filter((c) => !c.parent_category_id)
+
+  function subcategoriesOf(categoryId: string) {
+    return categories.filter((c) => c.parent_category_id === categoryId)
   }
 
   return (
@@ -79,11 +85,26 @@ export function ProductFilters({
         }}
       >
         <option value="">Todas</option>
-        {categories.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.name}
-          </option>
-        ))}
+        {topLevelCategories.map((cat) => {
+          const subcats = subcategoriesOf(cat.id)
+          if (subcats.length === 0) {
+            return (
+              <option key={cat.id} value={cat.id}>
+                {cat.name}
+              </option>
+            )
+          }
+          return (
+            <optgroup key={cat.id} label={cat.name}>
+              <option value={cat.id}>{cat.name}</option>
+              {subcats.map((sub) => (
+                <option key={sub.id} value={sub.id}>
+                  {sub.name}
+                </option>
+              ))}
+            </optgroup>
+          )
+        })}
       </select>
     </div>
   )

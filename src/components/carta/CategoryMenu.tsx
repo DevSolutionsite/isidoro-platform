@@ -18,10 +18,12 @@ const MAPS_URL =
 export function CategoryMenu({ categories, products }: CategoryMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isOrderOpen, setIsOrderOpen] = useState(false)
-  // El drawer de navegación solo salta a categorías de nivel superior — las
-  // subcategorías se muestran agrupadas dentro de esa sección en /carta,
-  // no como destinos de navegación propios.
+  const [expandedId, setExpandedId] = useState<string | null>(null)
   const topLevelCategories = categories.filter((c) => !c.parent_category_id)
+
+  function subcategoriesOf(categoryId: string) {
+    return categories.filter((c) => c.parent_category_id === categoryId)
+  }
 
   function handleSelect(category: Pick<Category, 'id' | 'name'>) {
     setIsOpen(false)
@@ -29,6 +31,10 @@ export function CategoryMenu({ categories, products }: CategoryMenuProps) {
       const el = document.getElementById(`section-${slugify(category.name)}`)
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }, 150)
+  }
+
+  function toggleExpanded(categoryId: string) {
+    setExpandedId((current) => (current === categoryId ? null : categoryId))
   }
 
   return (
@@ -106,23 +112,83 @@ export function CategoryMenu({ categories, products }: CategoryMenuProps) {
             </div>
 
             <nav className="flex-1 overflow-y-auto py-2">
-              {topLevelCategories.map((cat) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => handleSelect(cat)}
-                  className="w-full text-left px-5 py-3.5 text-sm font-medium transition-colors"
-                  style={{ color: 'var(--foreground)' }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'var(--surface-alt)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent'
-                  }}
-                >
-                  {cat.name}
-                </button>
-              ))}
+              {topLevelCategories.map((cat) => {
+                const subcats = subcategoriesOf(cat.id)
+                const hasSubcats = subcats.length > 0
+                const isExpanded = expandedId === cat.id
+                return (
+                  <div key={cat.id}>
+                    <div
+                      className="flex items-center"
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'var(--surface-alt)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent'
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => handleSelect(cat)}
+                        className="flex-1 text-left px-5 py-3.5 text-sm font-medium"
+                        style={{ color: 'var(--foreground)' }}
+                      >
+                        {cat.name}
+                      </button>
+                      {hasSubcats && (
+                        <button
+                          type="button"
+                          onClick={() => toggleExpanded(cat.id)}
+                          className="px-4 py-3.5"
+                          style={{ color: 'var(--foreground)' }}
+                          aria-label={isExpanded ? 'Contraer subcategorías' : 'Expandir subcategorías'}
+                          aria-expanded={isExpanded}
+                        >
+                          <svg
+                            width="14"
+                            height="14"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            style={{
+                              transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                              transition: 'transform 0.15s',
+                            }}
+                          >
+                            <polyline points="6 9 12 15 18 9" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+
+                    {hasSubcats && isExpanded && (
+                      <div>
+                        {subcats.map((sub) => (
+                          <button
+                            key={sub.id}
+                            type="button"
+                            onClick={() => handleSelect(sub)}
+                            className="w-full text-left pl-9 pr-5 py-3 text-sm transition-colors"
+                            style={{ color: 'var(--text-muted)' }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = 'var(--surface-alt)'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'transparent'
+                            }}
+                          >
+                            {sub.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
 
               <hr className="my-2 border-t" style={{ borderColor: 'var(--border)' }} />
 
