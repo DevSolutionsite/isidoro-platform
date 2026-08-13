@@ -8,6 +8,16 @@ export interface ProductActionState {
   error?: string
 }
 
+function buildListRedirect(formData: FormData, success: string): string {
+  const returnQ = (formData.get('returnQ') as string) || ''
+  const returnCategoria = (formData.get('returnCategoria') as string) || ''
+  const params = new URLSearchParams()
+  if (returnQ) params.set('q', returnQ)
+  if (returnCategoria) params.set('categoria', returnCategoria)
+  params.set('success', success)
+  return `/admin/productos?${params.toString()}`
+}
+
 const PRODUCT_IMAGES_BUCKET = 'product-images'
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 const ALLOWED_IMAGE_TYPES: Record<string, string> = {
@@ -82,7 +92,7 @@ export async function createProduct(
   })
   if (error) return { error: error.message }
 
-  redirect('/admin/productos?success=created')
+  redirect(buildListRedirect(formData, 'created'))
 }
 
 export async function updateProduct(
@@ -118,7 +128,7 @@ export async function updateProduct(
     .eq('id', id)
   if (error) return { error: error.message }
 
-  redirect('/admin/productos?success=updated')
+  redirect(buildListRedirect(formData, 'updated'))
 }
 
 export async function deleteProduct(id: string): Promise<{ ok: true } | { ok: false; code: string }> {

@@ -6,14 +6,25 @@ import { createProduct } from '@/lib/actions/admin-products'
 
 export const metadata: Metadata = { title: 'Nuevo producto — Admin Isidoro' }
 
-export default async function NuevoProductoPage() {
+export default async function NuevoProductoPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; categoria?: string }>
+}) {
+  const { q, categoria } = await searchParams
   const categories = await getCachedCategories()
+
+  const filterParams = new URLSearchParams()
+  if (q) filterParams.set('q', q)
+  if (categoria) filterParams.set('categoria', categoria)
+  const filterQuery = filterParams.toString()
+  const backHref = filterQuery ? `/admin/productos?${filterQuery}` : '/admin/productos'
 
   return (
     <div className="px-8 py-6">
       <div className="mb-6">
         <Link
-          href="/admin/productos"
+          href={backHref}
           className="text-xs mb-3 inline-block transition-opacity hover:opacity-70"
           style={{ color: 'var(--text-muted)' }}
         >
@@ -23,7 +34,13 @@ export default async function NuevoProductoPage() {
           Nuevo producto
         </h1>
       </div>
-      <ProductForm categories={categories ?? []} action={createProduct} mode="create" />
+      <ProductForm
+        categories={categories ?? []}
+        action={createProduct}
+        mode="create"
+        returnQ={q ?? ''}
+        returnCategoria={categoria ?? ''}
+      />
     </div>
   )
 }

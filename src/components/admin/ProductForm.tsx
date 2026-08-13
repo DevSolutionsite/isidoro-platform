@@ -12,6 +12,8 @@ interface ProductFormProps {
   categories: Pick<Category, 'id' | 'name' | 'parent_category_id'>[]
   action: (prevState: ProductActionState, formData: FormData) => Promise<ProductActionState>
   mode: 'create' | 'edit'
+  returnQ?: string
+  returnCategoria?: string
 }
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
@@ -26,7 +28,7 @@ const inputStyle = {
 const labelClass = 'block text-xs font-medium mb-1.5'
 const labelStyle = { color: 'var(--text-muted)' }
 
-export function ProductForm({ product, categories, action, mode }: ProductFormProps) {
+export function ProductForm({ product, categories, action, mode, returnQ, returnCategoria }: ProductFormProps) {
   const formRef = useRef<HTMLFormElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [state, formAction, pending] = useActionState<ProductActionState, FormData>(action, {})
@@ -91,8 +93,16 @@ export function ProductForm({ product, categories, action, mode }: ProductFormPr
     subcategoriesByParent.set(cat.parent_category_id, list)
   }
 
+  const cancelFilterParams = new URLSearchParams()
+  if (returnQ) cancelFilterParams.set('q', returnQ)
+  if (returnCategoria) cancelFilterParams.set('categoria', returnCategoria)
+  const cancelFilterQuery = cancelFilterParams.toString()
+  const cancelHref = cancelFilterQuery ? `/admin/productos?${cancelFilterQuery}` : '/admin/productos'
+
   return (
     <form ref={formRef} action={formAction} className="space-y-5 max-w-lg">
+      <input type="hidden" name="returnQ" value={returnQ ?? ''} />
+      <input type="hidden" name="returnCategoria" value={returnCategoria ?? ''} />
       {displayError && (
         <div
           className="rounded-lg px-3 py-2 text-sm"
@@ -274,7 +284,7 @@ export function ProductForm({ product, categories, action, mode }: ProductFormPr
           {pending ? 'Guardando...' : mode === 'create' ? 'Crear producto' : 'Guardar cambios'}
         </button>
         <Link
-          href="/admin/productos"
+          href={cancelHref}
           className="px-4 py-2 rounded-lg text-sm transition-opacity hover:opacity-70"
           style={{ color: 'var(--text-muted)' }}
         >

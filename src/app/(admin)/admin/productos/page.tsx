@@ -37,6 +37,12 @@ export default async function ProductosPage({
     return matchesQuery && matchesCategoria
   })
 
+  const filterParams = new URLSearchParams()
+  if (q) filterParams.set('q', q)
+  if (categoria) filterParams.set('categoria', categoria)
+  const filterQuery = filterParams.toString()
+  const withFilterQuery = (path: string) => (filterQuery ? `${path}?${filterQuery}` : path)
+
   return (
     <div>
       <SuccessBanner type={success} />
@@ -52,7 +58,7 @@ export default async function ProductosPage({
             </p>
           </div>
           <Link
-            href="/admin/productos/nuevo"
+            href={withFilterQuery('/admin/productos/nuevo')}
             className="px-4 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-80"
             style={{ background: 'var(--brand)', color: 'var(--background)' }}
           >
@@ -138,7 +144,7 @@ export default async function ProductosPage({
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-4">
                       <Link
-                        href={`/admin/productos/${product.id}/editar`}
+                        href={withFilterQuery(`/admin/productos/${product.id}/editar`)}
                         className="text-xs transition-opacity hover:opacity-70"
                         style={{ color: 'var(--brand)' }}
                       >
