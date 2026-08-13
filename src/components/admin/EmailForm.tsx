@@ -3,15 +3,26 @@
 import { useActionState, useEffect, useMemo, useRef, useState } from 'react'
 import { buildPromotionalEmailHtml } from '@/lib/email/promotionalTemplate'
 import { getSiteUrl } from '@/lib/constants'
-import type { EmailActionState } from '@/lib/actions/admin-email'
+import { maybeConvertHeicToJpeg } from '@/lib/convertHeic'
+import { ClientPicker } from './ClientPicker'
+import type { EmailActionState, ClientSearchResult } from '@/lib/actions/admin-email'
 
 interface EmailFormProps {
   action: (prevState: EmailActionState, formData: FormData) => Promise<EmailActionState>
   eligibleCount: number
 }
 
+type RecipientMode = 'all' | 'client' | 'email'
+
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 const ACCEPTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp']
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+const MODE_LABELS: Record<RecipientMode, string> = {
+  all: 'Todos los clientes',
+  client: 'Cliente específico',
+  email: 'Email suelto',
+}
 
 const inputClass = 'w-full rounded-lg px-3 py-2 text-sm outline-none transition-colors'
 const inputStyle = {
@@ -32,6 +43,14 @@ export function EmailForm({ action, eligibleCount }: EmailFormProps) {
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
   const [confirming, setConfirming] = useState(false)
+  const [converting, setConverting] = useState(false)
+  const [mode, setMode] = useState<RecipientMode>('all')
+  const [selectedClient, setSelectedClient] = useState<ClientSearchResult | null>(null)
+  const [recipientEmail, setRecipientEmail] = useState('')
+  const [fileInputKey, setFileInputKey] = useState(0)
+  const [lastHandledResult, setLastHandledResult] = useState<EmailActionState['result']>(undefined)
+  const [debouncedSubject, setDebouncedSubject] = useState('')
+  const [debouncedBody, setDebouncedBody] = useState('')
 
   useEffect(() => {
     return () => {
@@ -39,35 +58,106 @@ export function EmailForm({ action, eligibleCount }: EmailFormProps) {
     }
   }, [imageUrl])
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const input = e.target
+    let file = input.files?.[0]
     if (!file) return
+
+    setFileError(null)
+    setConverting(true)
+    try {
+      file = await maybeConvertHeicToJpeg(file)
+    } catch {
+      setFileError('No se pudo convertir la imagen HEIC. Probá exportarla como JPEG desde el teléfono.')
+      setConverting(false)
+      input.value = ''
+      return
+    }
+    setConverting(false)
 
     if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
       setFileError('Formato no soportado. Usá PNG, JPEG o WebP.')
-      e.target.value = ''
+      input.value = ''
       return
     }
     if (file.size > MAX_IMAGE_BYTES) {
       setFileError('La imagen supera el límite de 5MB.')
-      e.target.value = ''
+      input.value = ''
       return
     }
 
-    setFileError(null)
+    const dt = new DataTransfer()
+    dt.items.add(file)
+    input.files = dt.files
+
     if (imageUrl && imageUrl.startsWith('blob:')) URL.revokeObjectURL(imageUrl)
     setImageUrl(URL.createObjectURL(file))
   }
 
+  function handleRemoveImage() {
+    if (imageUrl && imageUrl.startsWith('blob:')) URL.revokeObjectURL(imageUrl)
+    setImageUrl(null)
+    setFileError(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  function handleResetForm() {
+    handleRemoveImage()
+    setSubject('')
+    setBody('')
+    setMode('all')
+    setSelectedClient(null)
+    setRecipientEmail('')
+  }
+
+  // Reset del form tras envío exitoso: ajuste de estado durante el render
+  // (patrón recomendado por React) en vez de un efecto, para no encadenar
+  // setState síncronos dentro de un useEffect. La revocación del blob queda
+  // a cargo del efecto de cleanup de arriba (se dispara solo al cambiar imageUrl).
+  if (state.result && state.result !== lastHandledResult) {
+    setLastHandledResult(state.result)
+    setSubject('')
+    setBody('')
+    setImageUrl(null)
+    setFileError(null)
+    setMode('all')
+    setSelectedClient(null)
+    setRecipientEmail('')
+    setFileInputKey((k) => k + 1)
+  }
+
+  const canSubmit =
+    mode === 'all'
+      ? eligibleCount > 0
+      : mode === 'client'
+        ? selectedClient !== null
+        : EMAIL_REGEX.test(recipientEmail.trim())
+
+  const confirmLabel =
+    mode === 'all'
+      ? `¿Enviar este mail a ${eligibleCount} clientes?`
+      : mode === 'client'
+        ? `¿Enviar este mail a ${selectedClient?.full_name}?`
+        : `¿Enviar este mail a ${recipientEmail.trim()}?`
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSubject(subject)
+      setDebouncedBody(body)
+    }, 400)
+    return () => clearTimeout(t)
+  }, [subject, body])
+
   const previewHtml = useMemo(
     () =>
       buildPromotionalEmailHtml({
-        subject: subject || 'Asunto del mail',
-        body: body || 'El cuerpo del mail aparece acá.',
+        subject: debouncedSubject || 'Asunto del mail',
+        body: debouncedBody || 'El cuerpo del mail aparece acá.',
         imageUrl,
         unsubscribeUrl: `${getSiteUrl()}/unsubscribe?token=preview`,
+        showUnsubscribe: mode !== 'email',
       }),
-    [subject, body, imageUrl]
+    [debouncedSubject, debouncedBody, imageUrl, mode]
   )
 
   const displayError = fileError ?? state.error
@@ -97,10 +187,56 @@ export function EmailForm({ action, eligibleCount }: EmailFormProps) {
               border: '1px solid var(--brand)',
             }}
           >
-            Enviados {state.result.sent} de {state.result.eligible} clientes elegibles
-            {state.result.failed > 0 ? ` (${state.result.failed} fallaron)` : ''}.
+            {state.result.eligible === 1
+              ? 'Mail enviado correctamente.'
+              : `Enviados ${state.result.sent} de ${state.result.eligible} clientes elegibles${
+                  state.result.failed > 0 ? ` (${state.result.failed} fallaron)` : ''
+                }.`}
           </div>
         )}
+
+        <div>
+          <label className={labelClass} style={labelStyle}>
+            Destinatario
+          </label>
+          <input type="hidden" name="recipient_mode" value={mode} />
+          <div className="flex gap-2 rounded-lg p-1" style={{ background: 'var(--surface-alt)' }}>
+            {(Object.keys(MODE_LABELS) as RecipientMode[]).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setMode(m)}
+                className="flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
+                style={
+                  mode === m
+                    ? { background: 'var(--brand)', color: 'var(--background)' }
+                    : { color: 'var(--text-muted)' }
+                }
+              >
+                {MODE_LABELS[m]}
+              </button>
+            ))}
+          </div>
+
+          {mode === 'client' && (
+            <div className="mt-3">
+              <input type="hidden" name="recipient_client_id" value={selectedClient?.id ?? ''} />
+              <ClientPicker selected={selectedClient} onSelect={setSelectedClient} />
+            </div>
+          )}
+
+          {mode === 'email' && (
+            <input
+              type="email"
+              name="recipient_email"
+              value={recipientEmail}
+              onChange={(e) => setRecipientEmail(e.target.value)}
+              placeholder="nombre@ejemplo.com"
+              className={`mt-3 ${inputClass}`}
+              style={inputStyle}
+            />
+          )}
+        </div>
 
         <div>
           <label htmlFor="subject" className={labelClass} style={labelStyle}>
@@ -140,32 +276,66 @@ export function EmailForm({ action, eligibleCount }: EmailFormProps) {
           <label htmlFor="image_file" className={labelClass} style={labelStyle}>
             Imagen (opcional)
           </label>
+          {imageUrl && (
+            <div className="mb-2 flex items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element -- preview de blob: local, no pasa por el optimizador */}
+              <img
+                src={imageUrl}
+                alt=""
+                className="rounded-lg object-cover"
+                style={{ height: 72, width: 72, border: '1px solid var(--border)' }}
+              />
+              <button
+                type="button"
+                onClick={handleRemoveImage}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-opacity hover:opacity-70"
+                style={{ color: '#dc2626', border: '1px solid rgba(220,38,38,0.3)' }}
+              >
+                Quitar imagen
+              </button>
+            </div>
+          )}
           <input
+            key={fileInputKey}
             ref={fileInputRef}
             id="image_file"
             name="image_file"
             type="file"
-            accept="image/png,image/jpeg,image/webp"
+            accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif"
             onChange={handleFileChange}
+            disabled={converting}
             className={inputClass}
             style={inputStyle}
           />
           <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
-            PNG, JPEG o WebP — máximo 5MB.
+            {converting
+              ? 'Convirtiendo imagen…'
+              : 'PNG, JPEG o WebP — máximo 5MB. HEIC (iPhone) se convierte automáticamente.'}
           </p>
         </div>
 
-        <div className="pt-2">
+        <div className="pt-2 flex items-center gap-3">
           <button
             type="button"
-            disabled={pending || eligibleCount === 0}
+            disabled={pending || converting || !canSubmit}
             onClick={() => setConfirming(true)}
             className="px-5 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
             style={{ background: 'var(--brand)', color: 'var(--background)' }}
           >
-            {pending ? 'Enviando…' : 'Enviar a todos los clientes'}
+            {pending ? 'Enviando…' : mode === 'all' ? 'Enviar a todos los clientes' : 'Enviar'}
           </button>
-          {eligibleCount === 0 && (
+          <button
+            type="button"
+            disabled={pending || converting}
+            onClick={handleResetForm}
+            className="px-4 py-2 rounded-lg text-sm transition-opacity hover:opacity-70 disabled:opacity-50"
+            style={{ color: 'var(--text-muted)' }}
+          >
+            Limpiar formulario
+          </button>
+        </div>
+        <div>
+          {mode === 'all' && eligibleCount === 0 && (
             <p className="mt-2 text-xs" style={{ color: 'var(--text-muted)' }}>
               No hay clientes elegibles para recibir mails.
             </p>
@@ -200,11 +370,12 @@ export function EmailForm({ action, eligibleCount }: EmailFormProps) {
             style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
           >
             <p className="font-semibold text-sm" style={{ color: 'var(--foreground)' }}>
-              ¿Enviar este mail a {eligibleCount} clientes?
+              {confirmLabel}
             </p>
             <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              Es una acción masiva e irreversible. No se puede cancelar el envío una vez
-              iniciado.
+              {mode === 'all'
+                ? 'Es una acción masiva e irreversible. No se puede cancelar el envío una vez iniciado.'
+                : 'No se puede cancelar el envío una vez iniciado.'}
             </p>
             <div className="flex items-center gap-3 justify-end">
               <button
@@ -225,7 +396,7 @@ export function EmailForm({ action, eligibleCount }: EmailFormProps) {
                 className="px-4 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
                 style={{ background: '#dc2626', color: '#fff' }}
               >
-                Sí, enviar a todos
+                {mode === 'all' ? 'Sí, enviar a todos' : 'Sí, enviar'}
               </button>
             </div>
           </div>

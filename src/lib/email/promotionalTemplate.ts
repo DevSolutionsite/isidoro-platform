@@ -17,6 +17,7 @@ export interface PromotionalEmailInput {
   body: string
   imageUrl?: string | null
   unsubscribeUrl: string
+  showUnsubscribe?: boolean
 }
 
 // Tabla + estilos inline: es lo único que Gmail/Outlook/Apple Mail
@@ -26,6 +27,7 @@ export function buildPromotionalEmailHtml({
   body,
   imageUrl,
   unsubscribeUrl,
+  showUnsubscribe = true,
 }: PromotionalEmailInput): string {
   const safeBody = escapeHtml(body).replace(/\n/g, '<br />')
   const safeSubject = escapeHtml(subject)
@@ -65,7 +67,11 @@ export function buildPromotionalEmailHtml({
             <tr>
               <td style="padding:24px; background-color:#faf7f2; border-top:1px solid #eee2d3;" align="center">
                 <p style="margin:0 0 8px 0; font-size:12px; color:#8a7f70;">Isidoro — Programa de fidelización</p>
-                <a href="${escapeHtml(unsubscribeUrl)}" style="font-size:12px; color:${BRAND_DARK}; text-decoration:underline;">Darse de baja de estos mails</a>
+                ${
+                  showUnsubscribe
+                    ? `<a href="${escapeHtml(unsubscribeUrl)}" style="font-size:12px; color:${BRAND_DARK}; text-decoration:underline;">Darse de baja de estos mails</a>`
+                    : ''
+                }
               </td>
             </tr>
           </table>
