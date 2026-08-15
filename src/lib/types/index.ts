@@ -25,6 +25,7 @@ export type ProductWithCategory = Product & {
 
 export type ProductWithDiscount = Product & {
   discount_price: number | null
+  delivery_eligible?: boolean
 }
 
 export type PromoSlide = {

@@ -65,6 +65,7 @@ export type Database = {
           name: string
           sort_order: number
           parent_category_id: string | null
+          available_for_delivery: boolean
           deleted_at: string | null
           created_at: string
           updated_at: string
@@ -74,6 +75,7 @@ export type Database = {
           name: string
           sort_order?: number
           parent_category_id?: string | null
+          available_for_delivery?: boolean
           deleted_at?: string | null
           created_at?: string
           updated_at?: string
@@ -82,6 +84,7 @@ export type Database = {
           name?: string
           sort_order?: number
           parent_category_id?: string | null
+          available_for_delivery?: boolean
           deleted_at?: string | null
           updated_at?: string
         }
@@ -96,6 +99,7 @@ export type Database = {
           image_url: string | null
           is_available: boolean
           sort_order: number
+          available_for_delivery: boolean
           deleted_at: string | null
           created_at: string
           updated_at: string
@@ -109,6 +113,7 @@ export type Database = {
           image_url?: string | null
           is_available?: boolean
           sort_order?: number
+          available_for_delivery?: boolean
           deleted_at?: string | null
           created_at?: string
           updated_at?: string
@@ -121,6 +126,7 @@ export type Database = {
           image_url?: string | null
           is_available?: boolean
           sort_order?: number
+          available_for_delivery?: boolean
           deleted_at?: string | null
           updated_at?: string
         }

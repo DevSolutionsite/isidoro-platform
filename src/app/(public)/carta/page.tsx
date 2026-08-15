@@ -88,9 +88,23 @@ export default async function CartaPage() {
     }
   }
 
+  const categoriesById = new Map((categories ?? []).map((c) => [c.id, c]))
+
+  function isDeliveryEligible(p: { category_id: string; available_for_delivery: boolean }): boolean {
+    if (!p.available_for_delivery) return false
+    const category = categoriesById.get(p.category_id)
+    if (!category || !category.available_for_delivery) return false
+    if (category.parent_category_id) {
+      const parent = categoriesById.get(category.parent_category_id)
+      if (!parent || !parent.available_for_delivery) return false
+    }
+    return true
+  }
+
   const productsWithDiscount: ProductWithDiscount[] = (products ?? []).map((p) => ({
     ...p,
     discount_price: discountMap.get(p.id) ?? null,
+    delivery_eligible: isDeliveryEligible(p),
   }))
 
   const slides: PromoSlide[] = [

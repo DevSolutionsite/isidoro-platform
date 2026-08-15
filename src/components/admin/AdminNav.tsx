@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { href: '/admin/inicio', label: 'Inicio' },
   { href: '/admin/productos', label: 'Productos' },
   { href: '/admin/categorias', label: 'Categorías' },
+  { href: '/admin/delivery', label: 'Delivery' },
   { href: '/admin/promociones', label: 'Promociones' },
   { href: '/admin/ofertas', label: 'Ofertas por horario' },
   { href: '/admin/recompensas', label: 'Recompensas' },

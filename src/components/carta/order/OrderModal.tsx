@@ -9,7 +9,7 @@ import { OrderReview } from './OrderReview'
 import { effectivePrice, type OrderCartLine, type OrderCustomerData } from './buildOrderMessage'
 
 interface OrderModalProps {
-  categories: Pick<Category, 'id' | 'name'>[]
+  categories: Pick<Category, 'id' | 'name' | 'parent_category_id'>[]
   products: ProductWithDiscount[]
   onClose: () => void
 }
