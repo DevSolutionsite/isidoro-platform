@@ -45,3 +45,19 @@ export async function deleteCategory(id: string): Promise<{ ok: true } | { ok: f
   revalidateTag('categories', { expire: 0 })
   return { ok: true }
 }
+
+export async function toggleCategoryActive(
+  id: string,
+  active: boolean,
+): Promise<{ ok: true } | { ok: false; code: string }> {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('categories')
+    .update({ is_active: active })
+    .eq('id', id)
+  if (error) return { ok: false, code: error.message }
+
+  revalidateTag('categories', { expire: 0 })
+  return { ok: true }
+}
