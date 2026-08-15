@@ -90,10 +90,23 @@ export default async function CartaPage() {
 
   const categoriesById = new Map((categories ?? []).map((c) => [c.id, c]))
 
+  // Categorías/subcategorías is_active independiente por fila (sin cascada,
+  // DEC-044): si el padre está inactivo pero la subcategoría no, la
+  // subcategoría se "desengancha" (parent_category_id -> null) y se renderiza
+  // como su propia sección de nivel superior en vez de desaparecer con el
+  // padre.
+  const activeCategories = (categories ?? []).filter((c) => c.is_active)
+  const activeCategoryIds = new Set(activeCategories.map((c) => c.id))
+  const visibleCategories = activeCategories.map((c) =>
+    c.parent_category_id && !activeCategoryIds.has(c.parent_category_id)
+      ? { ...c, parent_category_id: null }
+      : c,
+  )
+
   function isDeliveryEligible(p: { category_id: string; available_for_delivery: boolean }): boolean {
     if (!p.available_for_delivery) return false
     const category = categoriesById.get(p.category_id)
-    if (!category || !category.available_for_delivery) return false
+    if (!category || !category.available_for_delivery || !category.is_active) return false
     if (category.parent_category_id) {
       const parent = categoriesById.get(category.parent_category_id)
       if (!parent || !parent.available_for_delivery) return false
@@ -139,7 +152,7 @@ export default async function CartaPage() {
         style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
       >
         <div className="flex items-center justify-between px-3 py-3">
-          <CategoryMenu categories={categories ?? []} products={productsWithDiscount} />
+          <CategoryMenu categories={visibleCategories} products={productsWithDiscount} />
 
           <div className="flex items-center justify-center">
             <IsidoroLogo height={58} />
@@ -172,10 +185,10 @@ export default async function CartaPage() {
       {slides.length > 0 && <PromoCarousel slides={slides} />}
 
       <main className="pb-10">
-        {(categories ?? [])
+        {visibleCategories
           .filter((category) => !category.parent_category_id)
           .map((category) => {
-            const subcategories = (categories ?? []).filter(
+            const subcategories = visibleCategories.filter(
               (c) => c.parent_category_id === category.id,
             )
 
