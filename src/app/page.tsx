@@ -9,6 +9,12 @@ export const metadata: Metadata = {
   title: 'Isidoro — Bienvenido',
 }
 
+// Forzado a dinámico: con CSP por nonce (ver src/proxy.ts), una página
+// prerenderizada en build time no tiene forma de recibir el nonce por
+// request — sus <script> inline quedarían sin nonce y el navegador los
+// bloquearía, rompiendo la hidratación de esta página.
+export const dynamic = 'force-dynamic'
+
 export default async function Home() {
   const siteContent = await getCachedSiteContent()
 
