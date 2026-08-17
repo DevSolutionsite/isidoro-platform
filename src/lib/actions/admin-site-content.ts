@@ -2,6 +2,7 @@
 
 import { updateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { requireAdmin } from '@/lib/auth/requireAdmin'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 const HERO_IMAGES_BUCKET = 'hero-images'
@@ -60,6 +61,7 @@ async function getSiteContentRow(supabase: SupabaseClient) {
 
 export async function addHeroImage(formData: FormData): Promise<AddHeroImageResult> {
   const supabase = await createClient()
+  await requireAdmin(supabase)
   const imageFile = formData.get('image_file') as File | null
   if (!imageFile || imageFile.size === 0) {
     return { ok: false, code: 'missing_file' }
@@ -85,6 +87,7 @@ export async function addHeroImage(formData: FormData): Promise<AddHeroImageResu
 
 export async function removeHeroImage(url: string): Promise<SiteContentActionResult> {
   const supabase = await createClient()
+  await requireAdmin(supabase)
   const row = await getSiteContentRow(supabase)
   const hero_images = row.hero_images.filter((img) => img !== url)
 
@@ -108,6 +111,7 @@ export async function moveHeroImage(
   direction: 'up' | 'down'
 ): Promise<SiteContentActionResult> {
   const supabase = await createClient()
+  await requireAdmin(supabase)
   const row = await getSiteContentRow(supabase)
   const hero_images = [...row.hero_images]
 
@@ -131,6 +135,7 @@ export async function moveHeroImage(
 
 export async function updateHours(formData: FormData): Promise<SiteContentActionResult> {
   const supabase = await createClient()
+  await requireAdmin(supabase)
   const hours_text = (formData.get('hours_text') as string).trim() || null
 
   const row = await getSiteContentRow(supabase)

@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { requireAdmin } from '@/lib/auth/requireAdmin'
 
 export interface RewardActionState {
   error?: string
@@ -17,6 +18,7 @@ export async function createReward(
   formData: FormData
 ): Promise<RewardActionState> {
   const supabase = await createClient()
+  await requireAdmin(supabase)
   const name = formData.get('name') as string
   const description = (formData.get('description') as string) || null
   const points_cost = parseInt(formData.get('points_cost') as string, 10)
@@ -45,6 +47,7 @@ export async function updateReward(
   formData: FormData
 ): Promise<RewardActionState> {
   const supabase = await createClient()
+  await requireAdmin(supabase)
   const name = formData.get('name') as string
   const description = (formData.get('description') as string) || null
   const points_cost = parseInt(formData.get('points_cost') as string, 10)
@@ -70,6 +73,7 @@ export async function updateReward(
 
 export async function deleteReward(id: string): Promise<{ ok: true } | { ok: false; code: string }> {
   const supabase = await createClient()
+  await requireAdmin(supabase)
 
   const { error } = await supabase
     .from('rewards')
