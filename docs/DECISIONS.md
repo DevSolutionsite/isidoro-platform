@@ -505,6 +505,17 @@
 
 ---
 
+### DEC-044 — CORS restrictivo en las Edge Functions de puntos (hallazgo C3 de la auditoría de seguridad)
+
+- **Hallazgo:** `supabase/functions/_shared/cors.ts` mandaba `Access-Control-Allow-Origin: *` en las 6 Edge Functions que mueven puntos/dinero real (`register-consumption`, `initiate-redemption`, `confirm-redemption`, `split-consumption`, `adjust-points`, `reports`) — cualquier origen podía invocarlas desde el browser con un token robado.
+- **Fix:** `_shared/cors.ts` pasó de exportar un objeto estático a exportar `buildCorsHeaders(req)`, que lee el header `Origin` del request y solo lo devuelve en `Access-Control-Allow-Origin` si matchea `https://isidoro-platform.vercel.app` o `http://localhost:<cualquier puerto>` (regex, para no fijar un puerto de dev). Si no matchea, el header simplemente no se manda y el browser bloquea la lectura de la respuesta por su cuenta. Cambio mecánico en las 6 `index.ts`: una línea de import + `const corsHeaders = buildCorsHeaders(req)` al entrar al handler — el resto de cada archivo no se tocó.
+- **⚠️ Importante para el futuro — si cambia el dominio de producción (dominio propio, otro proyecto de Vercel, etc.):** hay que actualizar `ALLOWED_ORIGINS` en `supabase/functions/_shared/cors.ts` **y volver a deployar las 6 funciones** (`supabase functions deploy <nombre>` una por una, o `supabase functions deploy` sin nombre para las 6 juntas). Supabase empaqueta `_shared/` dentro de cada función al deployar — no es un módulo compartido en runtime, así que tocar solo el archivo compartido no alcanza sin redeploy.
+- **No cubre:** Vercel Preview Deployments (`isidoro-platform-*.vercel.app`) — decisión deliberada, un wildcard de subdominio reabre el mismo tipo de riesgo que este fix cierra. Si hace falta probar algo desde un preview, agregar esa URL puntual a `ALLOWED_ORIGINS`, no un wildcard.
+- **Tomada por:** Claude (auditoría de seguridad solicitada por Fran), aprobado por Fran antes de aplicar.
+- **Fecha:** 17 de agosto de 2026
+
+---
+
 ## System Prompts de los agentes
 
 ### CTO Agent — System Prompt

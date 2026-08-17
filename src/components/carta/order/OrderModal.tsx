@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Category, ProductWithDiscount } from '@/lib/types'
 import { ProductPicker } from './ProductPicker'
@@ -31,6 +31,19 @@ export function OrderModal({ categories, products, onClose }: OrderModalProps) {
   const [step, setStep] = useState<1 | 2 | 3>(1)
   const [cart, setCart] = useState<OrderCartLine[]>([])
   const [customer, setCustomer] = useState<OrderCustomerData>(INITIAL_CUSTOMER)
+
+  // El modal se monta vía portal encima de /carta sin desmontar la grilla
+  // de atrás (ProductCard con <Image>) — sin bloquear el scroll del body,
+  // el scroll puede encadenar hacia la página oculta y disparar su
+  // lazy-load de imágenes de fondo mientras el usuario cree estar
+  // scrolleando solo dentro del picker.
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [])
 
   const productsById = useMemo(() => new Map(products.map((p) => [p.id, p])), [products])
 
