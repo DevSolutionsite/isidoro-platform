@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { requireAdmin } from '@/lib/auth/requireAdmin'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export interface ProductActionState {
@@ -71,6 +72,7 @@ export async function createProduct(
   formData: FormData
 ): Promise<ProductActionState> {
   const supabase = await createClient()
+  await requireAdmin(supabase)
   const name = formData.get('name') as string
   const category_id = formData.get('category_id') as string
   const description = (formData.get('description') as string) || null
@@ -101,6 +103,7 @@ export async function updateProduct(
   formData: FormData
 ): Promise<ProductActionState> {
   const supabase = await createClient()
+  await requireAdmin(supabase)
   const name = formData.get('name') as string
   const category_id = formData.get('category_id') as string
   const description = (formData.get('description') as string) || null
@@ -133,6 +136,7 @@ export async function updateProduct(
 
 export async function deleteProduct(id: string): Promise<{ ok: true } | { ok: false; code: string }> {
   const supabase = await createClient()
+  await requireAdmin(supabase)
 
   const { error } = await supabase
     .from('products')

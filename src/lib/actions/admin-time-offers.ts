@@ -2,9 +2,11 @@
 
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { requireAdmin } from '@/lib/auth/requireAdmin'
 
 export async function createTimeOffer(formData: FormData) {
   const supabase = await createClient()
+  await requireAdmin(supabase)
   const name = formData.get('name') as string
   const description = (formData.get('description') as string) || null
   const start_time = (formData.get('start_time') as string) + ':00'
@@ -36,6 +38,7 @@ export async function createTimeOffer(formData: FormData) {
 
 export async function updateTimeOffer(id: string, formData: FormData) {
   const supabase = await createClient()
+  await requireAdmin(supabase)
   const name = formData.get('name') as string
   const description = (formData.get('description') as string) || null
   const start_time = (formData.get('start_time') as string) + ':00'
@@ -72,6 +75,7 @@ export async function updateTimeOffer(id: string, formData: FormData) {
 
 export async function deleteTimeOffer(id: string): Promise<{ ok: true } | { ok: false; code: string }> {
   const supabase = await createClient()
+  await requireAdmin(supabase)
 
   const { error } = await supabase
     .from('time_offers')

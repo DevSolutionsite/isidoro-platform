@@ -2,11 +2,13 @@
 
 import { updateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { requireAdmin } from '@/lib/auth/requireAdmin'
 
 export type SettingsActionResult = { ok: true } | { ok: false; code: string }
 
 export async function updatePointsPerPeso(formData: FormData): Promise<SettingsActionResult> {
   const supabase = await createClient()
+  await requireAdmin(supabase)
   const raw = formData.get('points_per_peso') as string
   const value = parseFloat(raw)
 
@@ -34,6 +36,7 @@ export async function updateMaxConsumptionAmount(
   formData: FormData
 ): Promise<SettingsActionResult> {
   const supabase = await createClient()
+  await requireAdmin(supabase)
   const raw = formData.get('max_consumption_amount') as string
   const value = parseFloat(raw)
 

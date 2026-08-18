@@ -1,4 +1,4 @@
-import { heicTo, isHeic } from 'heic-to'
+import { heicTo, isHeic } from 'heic-to/csp'
 
 const MAX_DIMENSION = 2000
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024

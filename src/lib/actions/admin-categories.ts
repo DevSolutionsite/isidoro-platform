@@ -3,9 +3,11 @@
 import { redirect } from 'next/navigation'
 import { revalidateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { requireAdmin } from '@/lib/auth/requireAdmin'
 
 export async function createCategory(formData: FormData) {
   const supabase = await createClient()
+  await requireAdmin(supabase)
   const name = formData.get('name') as string
   const sort_order = parseInt(formData.get('sort_order') as string, 10) || 0
   const parent_category_id = (formData.get('parent_category_id') as string) || null
@@ -19,6 +21,7 @@ export async function createCategory(formData: FormData) {
 
 export async function updateCategory(id: string, formData: FormData) {
   const supabase = await createClient()
+  await requireAdmin(supabase)
   const name = formData.get('name') as string
   const sort_order = parseInt(formData.get('sort_order') as string, 10) || 0
   const parent_category_id = (formData.get('parent_category_id') as string) || null
@@ -35,6 +38,7 @@ export async function updateCategory(id: string, formData: FormData) {
 
 export async function deleteCategory(id: string): Promise<{ ok: true } | { ok: false; code: string }> {
   const supabase = await createClient()
+  await requireAdmin(supabase)
 
   const { error } = await supabase
     .from('categories')
@@ -51,6 +55,7 @@ export async function toggleCategoryActive(
   active: boolean,
 ): Promise<{ ok: true } | { ok: false; code: string }> {
   const supabase = await createClient()
+  await requireAdmin(supabase)
 
   const { error } = await supabase
     .from('categories')

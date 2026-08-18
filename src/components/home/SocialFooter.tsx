@@ -1,8 +1,9 @@
-// TODO: reemplazar con los links reales de las redes de Isidoro
+import { RESTAURANT_WHATSAPP_NUMBER } from '@/lib/constants'
+
 const SOCIAL_LINKS = {
-  whatsapp: 'PENDIENTE_LINK_WHATSAPP',
-  facebook: 'PENDIENTE_LINK_FACEBOOK',
-  instagram: 'PENDIENTE_LINK_INSTAGRAM',
+  whatsapp: `https://wa.me/${RESTAURANT_WHATSAPP_NUMBER}`,
+  facebook: 'https://www.facebook.com/isidoro.caferesto',
+  instagram: 'https://www.instagram.com/isidoro.resto/',
 }
 
 const ICON_PROPS = {

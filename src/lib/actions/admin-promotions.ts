@@ -2,9 +2,11 @@
 
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { requireAdmin } from '@/lib/auth/requireAdmin'
 
 export async function createPromotion(formData: FormData) {
   const supabase = await createClient()
+  await requireAdmin(supabase)
   const name = formData.get('name') as string
   const description = (formData.get('description') as string) || null
   const valid_from = new Date(formData.get('valid_from') as string).toISOString()
@@ -21,6 +23,7 @@ export async function createPromotion(formData: FormData) {
 
 export async function updatePromotion(id: string, formData: FormData) {
   const supabase = await createClient()
+  await requireAdmin(supabase)
   const name = formData.get('name') as string
   const description = (formData.get('description') as string) || null
   const valid_from = new Date(formData.get('valid_from') as string).toISOString()
@@ -38,6 +41,7 @@ export async function updatePromotion(id: string, formData: FormData) {
 
 export async function deletePromotion(id: string): Promise<{ ok: true } | { ok: false; code: string }> {
   const supabase = await createClient()
+  await requireAdmin(supabase)
 
   const { error } = await supabase
     .from('promotions')
