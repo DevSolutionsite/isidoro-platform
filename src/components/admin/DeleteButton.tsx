@@ -40,6 +40,8 @@ export function DeleteButton({ action, label = 'Eliminar' }: DeleteButtonProps) 
               }
               setConfirming(false)
               router.refresh()
+            } catch (err) {
+              setError(err instanceof Error ? err.message : 'No se pudo eliminar.')
             } finally {
               setPending(false)
             }

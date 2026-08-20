@@ -18,6 +18,7 @@ export default async function OfertasPage({
   const { data } = await supabase
     .from('time_offers')
     .select('*, time_offer_products(product_id, products(name))')
+    .is('deleted_at', null)
     .order('start_time', { ascending: true })
 
   const offers = data ?? []

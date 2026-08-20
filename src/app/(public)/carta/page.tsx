@@ -65,11 +65,12 @@ export default async function CartaPage() {
       .eq('is_available', true)
       .is('deleted_at', null)
       .order('sort_order', { ascending: true }),
-    supabase.from('promotions').select('*').eq('is_active', true),
+    supabase.from('promotions').select('*').eq('is_active', true).is('deleted_at', null),
     supabase
       .from('time_offers')
       .select('*, time_offer_products(product_id, price_override)')
-      .eq('is_active', true),
+      .eq('is_active', true)
+      .is('deleted_at', null),
   ])
 
   const timezone = settings?.timezone ?? 'America/Argentina/Buenos_Aires'

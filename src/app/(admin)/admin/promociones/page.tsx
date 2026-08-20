@@ -35,6 +35,7 @@ export default async function PromocionesPage({
   const { data } = await supabase
     .from('promotions')
     .select('*')
+    .is('deleted_at', null)
     .order('valid_from', { ascending: false })
 
   const promos = data ?? []

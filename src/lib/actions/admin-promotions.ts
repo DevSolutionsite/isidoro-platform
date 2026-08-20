@@ -45,7 +45,7 @@ export async function deletePromotion(id: string): Promise<{ ok: true } | { ok: 
 
   const { error } = await supabase
     .from('promotions')
-    .update({ is_active: false })
+    .update({ deleted_at: new Date().toISOString() })
     .eq('id', id)
   if (error) throw new Error(error.message)
 
