@@ -50,7 +50,7 @@ export function RewardsList({ rewards, totalPoints }: Props) {
       }}
     >
       <p className="text-sm font-semibold" style={{ color: 'var(--brand-dark)' }}>
-        Podés canjear ahora
+        Recompensas disponibles
       </p>
 
       {errorMsg && (
@@ -71,12 +71,21 @@ export function RewardsList({ rewards, totalPoints }: Props) {
           const canAfford = totalPoints >= reward.points_cost
           const pending = pendingRewardId === reward.id
           return (
-            <li key={reward.id} className="flex items-center justify-between gap-3">
+            <li
+              key={reward.id}
+              className="flex items-center justify-between gap-3"
+              style={canAfford ? undefined : { opacity: 0.55 }}
+            >
               <div className="min-w-0">
                 <p className="text-sm font-medium truncate">{reward.name}</p>
                 {reward.description && (
                   <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                     {reward.description}
+                  </p>
+                )}
+                {!canAfford && (
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    Te faltan {reward.points_cost - totalPoints} puntos
                   </p>
                 )}
               </div>
@@ -92,20 +101,18 @@ export function RewardsList({ rewards, totalPoints }: Props) {
                   {reward.points_cost} pts
                 </span>
 
-                {canAfford && (
-                  <button
-                    type="button"
-                    onClick={() => handleCanjear(reward)}
-                    disabled={pendingRewardId !== null}
-                    className="text-xs font-semibold px-3 py-1.5 rounded-full transition-opacity hover:opacity-80 disabled:opacity-30"
-                    style={{
-                      background: 'var(--brand-dark)',
-                      color:      'var(--background)',
-                    }}
-                  >
-                    {pending ? 'Canjeando...' : 'Canjear'}
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => handleCanjear(reward)}
+                  disabled={pendingRewardId !== null || !canAfford}
+                  className="text-xs font-semibold px-3 py-1.5 rounded-full transition-opacity hover:opacity-80 disabled:opacity-30"
+                  style={{
+                    background: 'var(--brand-dark)',
+                    color:      'var(--background)',
+                  }}
+                >
+                  {pending ? 'Canjeando...' : 'Canjear'}
+                </button>
               </div>
             </li>
           )

@@ -64,9 +64,6 @@ export default async function PerfilPage({
     : null
 
   const totalPoints = balance?.total_points ?? 0
-  const affordableRewards = (rewards ?? []).filter(
-    (r) => r.is_active && totalPoints >= r.points_cost,
-  )
 
   return (
     <div className="px-4 pb-10 space-y-6 pt-6">
@@ -90,9 +87,9 @@ export default async function PerfilPage({
 
       <PointsCard points={totalPoints} />
 
-      {affordableRewards.length > 0 && (
+      {(rewards ?? []).length > 0 && (
         <RewardsList
-          rewards={affordableRewards}
+          rewards={rewards ?? []}
           totalPoints={totalPoints}
         />
       )}
