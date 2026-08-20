@@ -7,12 +7,15 @@ export const metadata: Metadata = { title: 'Email — Admin Isidoro' }
 
 export default async function AdminEmailPage() {
   const supabase = await createClient()
-  const { count } = await supabase
+  const { data: eligibleClients } = await supabase
     .from('profiles')
-    .select('id', { count: 'exact', head: true })
+    .select('full_name')
     .eq('role', 'cliente')
     .eq('marketing_consent', true)
     .eq('email_opt_out', false)
+    .order('full_name')
+
+  const eligibleNames = (eligibleClients ?? []).map((c) => c.full_name)
 
   return (
     <div className="px-8 py-6">
@@ -24,7 +27,7 @@ export default async function AdminEmailPage() {
       </p>
 
       <div className="mt-6">
-        <EmailForm action={sendPromotionalEmail} eligibleCount={count ?? 0} />
+        <EmailForm action={sendPromotionalEmail} eligibleCount={eligibleNames.length} eligibleNames={eligibleNames} />
       </div>
     </div>
   )

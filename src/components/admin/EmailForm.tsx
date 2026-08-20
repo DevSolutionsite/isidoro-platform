@@ -9,6 +9,7 @@ import type { EmailActionState } from '@/lib/actions/admin-email'
 interface EmailFormProps {
   action: (prevState: EmailActionState, formData: FormData) => Promise<EmailActionState>
   eligibleCount: number
+  eligibleNames: string[]
 }
 
 type RecipientMode = 'all' | 'email'
@@ -31,7 +32,7 @@ const inputStyle = {
 const labelClass = 'block text-xs font-medium mb-1.5'
 const labelStyle = { color: 'var(--text-muted)' }
 
-export function EmailForm({ action, eligibleCount }: EmailFormProps) {
+export function EmailForm({ action, eligibleCount, eligibleNames }: EmailFormProps) {
   const formRef = useRef<HTMLFormElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [state, formAction, pending] = useActionState<EmailActionState, FormData>(action, {})
@@ -217,6 +218,25 @@ export function EmailForm({ action, eligibleCount }: EmailFormProps) {
               className={`mt-3 ${inputClass}`}
               style={inputStyle}
             />
+          )}
+
+          {mode === 'all' && eligibleNames.length > 0 && (
+            <details className="mt-3 rounded-lg" style={{ border: '1px solid var(--border)' }}>
+              <summary
+                className="cursor-pointer px-3 py-2 text-xs font-medium select-none"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                Ver lista de destinatarios ({eligibleNames.length})
+              </summary>
+              <ul
+                className="max-h-48 overflow-y-auto px-3 pb-2 text-xs space-y-1"
+                style={{ color: 'var(--foreground)' }}
+              >
+                {eligibleNames.map((name, i) => (
+                  <li key={i}>{name}</li>
+                ))}
+              </ul>
+            </details>
           )}
         </div>
 
