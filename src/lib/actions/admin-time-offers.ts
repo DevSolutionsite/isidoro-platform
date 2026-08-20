@@ -3,6 +3,9 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { requireAdmin } from '@/lib/auth/requireAdmin'
+import { uploadAdminImage, deleteAdminImage } from '@/lib/storage/adminImageUpload'
+
+const TIME_OFFER_IMAGES_BUCKET = 'time-offer-images'
 
 export async function createTimeOffer(formData: FormData) {
   const supabase = await createClient()
@@ -13,9 +16,18 @@ export async function createTimeOffer(formData: FormData) {
   const end_time = (formData.get('end_time') as string) + ':00'
   const is_active = formData.get('is_active') === 'on'
 
+  const imageFile = formData.get('image_file') as File | null
+  let image_url = (formData.get('current_image_url') as string) || null
+
+  if (imageFile && imageFile.size > 0) {
+    const result = await uploadAdminImage(supabase, TIME_OFFER_IMAGES_BUCKET, imageFile)
+    if ('error' in result) throw new Error(result.error)
+    image_url = result.url
+  }
+
   const { data, error } = await supabase
     .from('time_offers')
-    .insert({ name, description, start_time, end_time, is_active })
+    .insert({ name, description, start_time, end_time, is_active, image_url })
     .select('id')
     .single()
   if (error) throw new Error(error.message)
@@ -45,9 +57,23 @@ export async function updateTimeOffer(id: string, formData: FormData) {
   const end_time = (formData.get('end_time') as string) + ':00'
   const is_active = formData.get('is_active') === 'on'
 
+  const imageFile = formData.get('image_file') as File | null
+  const previousImageUrl = (formData.get('current_image_url') as string) || null
+  let image_url = previousImageUrl
+
+  if (imageFile && imageFile.size > 0) {
+    const result = await uploadAdminImage(supabase, TIME_OFFER_IMAGES_BUCKET, imageFile)
+    if ('error' in result) throw new Error(result.error)
+    image_url = result.url
+
+    if (previousImageUrl) {
+      await deleteAdminImage(supabase, TIME_OFFER_IMAGES_BUCKET, previousImageUrl)
+    }
+  }
+
   const { error } = await supabase
     .from('time_offers')
-    .update({ name, description, start_time, end_time, is_active })
+    .update({ name, description, start_time, end_time, is_active, image_url })
     .eq('id', id)
   if (error) throw new Error(error.message)
 

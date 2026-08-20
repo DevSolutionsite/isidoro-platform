@@ -78,15 +78,33 @@ export default async function OfertasPage({
                     }}
                   >
                     <td className="px-4 py-3 font-medium" style={{ color: 'var(--foreground)' }}>
-                      {offer.name}
-                      {offer.description && (
-                        <p
-                          className="text-xs mt-0.5 font-normal line-clamp-1"
-                          style={{ color: 'var(--text-muted)' }}
-                        >
-                          {offer.description}
-                        </p>
-                      )}
+                      <div className="flex items-center gap-3">
+                        {offer.image_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- thumbnail admin, no pasa por el optimizador
+                          <img
+                            src={offer.image_url}
+                            alt=""
+                            className="shrink-0 rounded-md object-cover"
+                            style={{ width: 48, height: 48, border: '1px solid var(--border)' }}
+                          />
+                        ) : (
+                          <div
+                            className="shrink-0 rounded-md"
+                            style={{ width: 48, height: 48, background: 'var(--surface-alt)', border: '1px solid var(--border)' }}
+                          />
+                        )}
+                        <div className="min-w-0">
+                          {offer.name}
+                          {offer.description && (
+                            <p
+                              className="text-xs mt-0.5 font-normal line-clamp-1"
+                              style={{ color: 'var(--text-muted)' }}
+                            >
+                              {offer.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
                     </td>
 
                     <td

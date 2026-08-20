@@ -54,7 +54,16 @@ export function PromoCarousel({ slides }: PromoCarouselProps) {
             height: 260,
           }}
         >
-          <SlideImagePlaceholder />
+          {slide.image_url ? (
+            // eslint-disable-next-line @next/next/no-img-element -- imagen de fondo full-bleed, no pasa por el optimizador
+            <img
+              src={slide.image_url}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          ) : (
+            <SlideImagePlaceholder />
+          )}
 
           {/* gradient for text legibility */}
           <div

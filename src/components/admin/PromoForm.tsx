@@ -1,6 +1,8 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { maybeConvertHeicToJpeg } from '@/lib/convertHeic'
 import type { Promotion } from '@/lib/types'
 
 interface PromoFormProps {
@@ -8,6 +10,9 @@ interface PromoFormProps {
   action: (formData: FormData) => Promise<void>
   mode: 'create' | 'edit'
 }
+
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+const ACCEPTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp']
 
 const inputClass = 'w-full rounded-lg px-3 py-2 text-sm outline-none transition-colors'
 const inputStyle = {
@@ -24,8 +29,66 @@ function toDatetimeLocal(iso: string): string {
 }
 
 export function PromoForm({ promo, action, mode }: PromoFormProps) {
+  const [fileError, setFileError] = useState<string | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(promo?.image_url ?? null)
+  const [converting, setConverting] = useState(false)
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl && previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl)
+      }
+    }
+  }, [previewUrl])
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const input = e.target
+    let file = input.files?.[0]
+    if (!file) return
+
+    setFileError(null)
+    setConverting(true)
+    try {
+      file = await maybeConvertHeicToJpeg(file)
+    } catch {
+      setFileError('No se pudo convertir la imagen HEIC. Probá exportarla como JPEG desde el teléfono.')
+      setConverting(false)
+      input.value = ''
+      return
+    }
+    setConverting(false)
+
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+      setFileError('Formato no soportado. Usá PNG, JPEG o WebP.')
+      input.value = ''
+      return
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      setFileError('La imagen supera el límite de 5MB.')
+      input.value = ''
+      return
+    }
+
+    const dt = new DataTransfer()
+    dt.items.add(file)
+    input.files = dt.files
+
+    if (previewUrl && previewUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(previewUrl)
+    }
+    setPreviewUrl(URL.createObjectURL(file))
+  }
+
   return (
     <form action={action} className="space-y-5 max-w-lg">
+      {fileError && (
+        <div
+          className="rounded-lg px-3 py-2 text-sm"
+          style={{ background: 'rgba(220,38,38,0.1)', color: '#dc2626', border: '1px solid rgba(220,38,38,0.3)' }}
+        >
+          {fileError}
+        </div>
+      )}
       {/* Nombre */}
       <div>
         <label htmlFor="name" className={labelClass} style={labelStyle}>
@@ -91,6 +154,36 @@ export function PromoForm({ promo, action, mode }: PromoFormProps) {
         </div>
       </div>
 
+      {/* Imagen */}
+      <div>
+        <label htmlFor="image_file" className={labelClass} style={labelStyle}>
+          Imagen de fondo
+        </label>
+        <input type="hidden" name="current_image_url" value={promo?.image_url ?? ''} />
+        {previewUrl && (
+          // eslint-disable-next-line @next/next/no-img-element -- preview de blob: local o URL existente, no pasa por el optimizador
+          <img
+            src={previewUrl}
+            alt=""
+            className="mb-2 rounded-lg object-cover"
+            style={{ height: 108, width: 192, border: '1px solid var(--border)' }}
+          />
+        )}
+        <input
+          id="image_file"
+          name="image_file"
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif"
+          onChange={handleFileChange}
+          disabled={converting}
+          className={inputClass}
+          style={inputStyle}
+        />
+        <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+          {converting ? 'Convirtiendo imagen…' : 'PNG, JPEG o WebP — máximo 5MB. HEIC (iPhone) se convierte automáticamente. Opcional — se usa de fondo en la carta.'}
+        </p>
+      </div>
+
       {/* Activa */}
       <div className="flex items-center gap-3">
         <input
@@ -109,7 +202,8 @@ export function PromoForm({ promo, action, mode }: PromoFormProps) {
       <div className="flex items-center gap-3 pt-2">
         <button
           type="submit"
-          className="px-5 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-80"
+          disabled={converting}
+          className="px-5 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
           style={{ background: 'var(--brand)', color: 'var(--background)' }}
         >
           {mode === 'create' ? 'Crear promoción' : 'Guardar cambios'}

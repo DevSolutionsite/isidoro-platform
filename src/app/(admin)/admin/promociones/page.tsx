@@ -89,12 +89,30 @@ export default async function PromocionesPage({
                     }}
                   >
                     <td className="px-4 py-3 font-medium" style={{ color: 'var(--foreground)' }}>
-                      {promo.name}
-                      {promo.description && (
-                        <p className="text-xs mt-0.5 font-normal line-clamp-1" style={{ color: 'var(--text-muted)' }}>
-                          {promo.description}
-                        </p>
-                      )}
+                      <div className="flex items-center gap-3">
+                        {promo.image_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- thumbnail admin, no pasa por el optimizador
+                          <img
+                            src={promo.image_url}
+                            alt=""
+                            className="shrink-0 rounded-md object-cover"
+                            style={{ width: 48, height: 48, border: '1px solid var(--border)' }}
+                          />
+                        ) : (
+                          <div
+                            className="shrink-0 rounded-md"
+                            style={{ width: 48, height: 48, background: 'var(--surface-alt)', border: '1px solid var(--border)' }}
+                          />
+                        )}
+                        <div className="min-w-0">
+                          {promo.name}
+                          {promo.description && (
+                            <p className="text-xs mt-0.5 font-normal line-clamp-1" style={{ color: 'var(--text-muted)' }}>
+                              {promo.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
                     </td>
                     <td className="px-4 py-3 tabular-nums" style={{ color: 'var(--text-muted)' }}>
                       {formatDate(promo.valid_from)}

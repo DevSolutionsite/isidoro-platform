@@ -133,6 +133,7 @@ export default async function CartaPage() {
         description: offer.description,
         price: top?.price_override ?? product?.price ?? null,
         originalPrice: product && top?.price_override != null ? product.price : null,
+        image_url: offer.image_url,
       }
     }),
     ...activePromos.map((promo): PromoSlide => ({
@@ -142,6 +143,7 @@ export default async function CartaPage() {
       description: promo.description,
       price: null,
       originalPrice: null,
+      image_url: promo.image_url,
     })),
   ]
 

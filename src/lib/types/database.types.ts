@@ -142,6 +142,7 @@ export type Database = {
           valid_from: string
           valid_until: string
           is_active: boolean
+          image_url: string | null
           deleted_at: string | null
           created_at: string
           updated_at: string
@@ -153,6 +154,7 @@ export type Database = {
           valid_from: string
           valid_until: string
           is_active?: boolean
+          image_url?: string | null
           deleted_at?: string | null
           created_at?: string
           updated_at?: string
@@ -163,6 +165,7 @@ export type Database = {
           valid_from?: string
           valid_until?: string
           is_active?: boolean
+          image_url?: string | null
           deleted_at?: string | null
           updated_at?: string
         }
@@ -175,6 +178,7 @@ export type Database = {
           start_time: string
           end_time: string
           is_active: boolean
+          image_url: string | null
           deleted_at: string | null
           created_at: string
           updated_at: string
@@ -186,6 +190,7 @@ export type Database = {
           start_time: string
           end_time: string
           is_active?: boolean
+          image_url?: string | null
           deleted_at?: string | null
           created_at?: string
           updated_at?: string
@@ -196,6 +201,7 @@ export type Database = {
           start_time?: string
           end_time?: string
           is_active?: boolean
+          image_url?: string | null
           deleted_at?: string | null
           updated_at?: string
         }
