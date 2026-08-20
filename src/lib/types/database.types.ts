@@ -66,6 +66,7 @@ export type Database = {
           sort_order: number
           parent_category_id: string | null
           available_for_delivery: boolean
+          is_active: boolean
           deleted_at: string | null
           created_at: string
           updated_at: string
@@ -76,6 +77,7 @@ export type Database = {
           sort_order?: number
           parent_category_id?: string | null
           available_for_delivery?: boolean
+          is_active?: boolean
           deleted_at?: string | null
           created_at?: string
           updated_at?: string
@@ -85,6 +87,7 @@ export type Database = {
           sort_order?: number
           parent_category_id?: string | null
           available_for_delivery?: boolean
+          is_active?: boolean
           deleted_at?: string | null
           updated_at?: string
         }

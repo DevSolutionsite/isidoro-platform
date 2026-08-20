@@ -516,6 +516,21 @@
 
 ---
 
+### DEC-045 — Frontend de `categories.is_active` conectado: toggle en admin + filtro en `/carta` (cierra el punto 5 de DEC-036, cierra DEC-042)
+
+- **Contexto:** DEC-042 dejó escrita la migración de `is_active` pero deliberadamente sin conectar del lado del frontend, a la espera de que Kevin la corriera en producción (riesgo concreto: filtrar contra una columna inexistente hubiera ocultado toda la carta). Kevin confirmó que ya la corrió — se procede a conectar el resto.
+- **Diseño:**
+  - **Sin cascada entre niveles:** desactivar una categoría de nivel superior NO oculta a sus subcategorías activas — cada fila decide su propia visibilidad de forma independiente. Si una subcategoría queda "huérfana visible" (activa, con el padre inactivo), se renderiza como su propia sección de nivel superior en `/carta`, sin el título del padre.
+  - **Cruce con delivery:** un producto solo es elegible para pedido por WhatsApp si, además de lo que ya exigía `available_for_delivery` (con su cascada existente al padre, sin cambios), su categoría propia tiene `is_active = true` — sin cascada al padre, mismo criterio de independencia que en `/carta`.
+- **Archivos nuevos:** `src/components/admin/CategoryActiveToggle.tsx`.
+- **Archivos editados:** `src/lib/types/database.types.ts` (tipo `categories` con `is_active`, faltante desde que se corrió la migración de DEC-042), `src/lib/actions/admin-categories.ts` (`toggleCategoryActive`), `src/app/(admin)/admin/categorias/page.tsx` (columna "Activo"), `src/app/(public)/carta/page.tsx` (`visibleCategories` con promoción de huérfanas, usado en el render principal y pasado a `CategoryMenu`/`ProductPicker` sin tocar el código de esos dos componentes; `isDeliveryEligible` extendido).
+- **Gap de infraestructura encontrado (no introducido por este trabajo):** los deploys de Preview de este proyecto nunca funcionaron — las 6 variables de entorno de Supabase/Google están cargadas en Vercel solo para el ambiente "Production", no para "Preview" (`vercel env ls` lo confirma). Un intento de probar este cambio en un deploy de preview falló en build con `supabaseUrl is required`. Tampoco sirvió `npm run dev` local como alternativa: el login con Google redirige según la Site URL configurada en Supabase Auth, que apunta a producción, no a `localhost:3000`. Ninguno de los dos es un problema de este cambio — quedan como deuda de infraestructura para Kevin si se quiere volver a intentar preview/local en el futuro.
+- **Verificado en producción (sin ambiente de preview disponible, ver gap arriba):** `tsc --noEmit`, `eslint` y `next build` limpios antes de deployar. Ya en producción, se probaron y revirtieron dos casos con toggles reales: (1) desactivar la subcategoría "Papas Fritas" — desaparece de `/carta` y del picker de pedidos por WhatsApp sin afectar "Provoletas" ni "Empanadas"; (2) desactivar la categoría padre "Entradas" dejando sus 3 subcategorías activas — "Entradas" y su producto propio ("Rabas") desaparecen, mientras "Provoletas", "Empanadas" y "Papas Fritas" se siguen mostrando, cada una como su propia sección de nivel superior sin el título "Entradas". Ambos toggles se revirtieron a su estado original (todo `is_active = true`) antes de terminar.
+- **Tomada por:** Fran (Frontend Agent) — pedido directo del usuario, plan revisado y aprobado antes de codear.
+- **Fecha:** 15 de agosto de 2026
+
+---
+
 ## System Prompts de los agentes
 
 ### CTO Agent — System Prompt

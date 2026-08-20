@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { SuccessBanner } from '@/components/admin/SuccessBanner'
 import { DeleteButton } from '@/components/admin/DeleteButton'
+import { CategoryActiveToggle } from '@/components/admin/CategoryActiveToggle'
 import { deleteCategory } from '@/lib/actions/admin-categories'
 
 export const metadata: Metadata = { title: 'Categorías — Admin Isidoro' }
@@ -94,6 +95,9 @@ export default async function CategoriasPage({
                 <th className="text-center px-4 py-3 font-medium" style={{ color: 'var(--text-muted)' }}>
                   Productos
                 </th>
+                <th className="text-center px-4 py-3 font-medium" style={{ color: 'var(--text-muted)' }}>
+                  Activo
+                </th>
                 <th className="text-right px-4 py-3 font-medium" style={{ color: 'var(--text-muted)' }}>
                   Acciones
                 </th>
@@ -124,6 +128,13 @@ export default async function CategoriasPage({
                   </td>
                   <td className="px-4 py-3 text-center tabular-nums" style={{ color: 'var(--text-muted)' }}>
                     {isSub ? directCountMap[cat.id] ?? 0 : totalCount(cat.id)}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <CategoryActiveToggle
+                      categoryId={cat.id}
+                      initialActive={cat.is_active}
+                      categoryName={cat.name}
+                    />
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-4">
