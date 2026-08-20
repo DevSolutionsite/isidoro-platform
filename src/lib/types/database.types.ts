@@ -30,6 +30,7 @@ export type Database = {
           city: string | null
           qr_token: string
           email_opt_out: boolean
+          marketing_consent: boolean
           unsubscribe_token: string
           created_at: string
           updated_at: string
@@ -43,6 +44,7 @@ export type Database = {
           city?: string | null
           qr_token?: string
           email_opt_out?: boolean
+          marketing_consent?: boolean
           unsubscribe_token?: string
           created_at?: string
           updated_at?: string
@@ -55,6 +57,7 @@ export type Database = {
           city?: string | null
           qr_token?: string
           email_opt_out?: boolean
+          marketing_consent?: boolean
           unsubscribe_token?: string
           updated_at?: string
         }

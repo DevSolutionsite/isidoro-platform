@@ -27,6 +27,7 @@ export function CompletarPerfilForm({
   const [dni, setDni] = useState(initialDni)
   const [phone, setPhone] = useState(initialPhone)
   const [city, setCity] = useState(initialCity)
+  const [marketingConsent, setMarketingConsent] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -55,7 +56,12 @@ export function CompletarPerfilForm({
     const supabase = createClient()
     const { error: updateError } = await supabase
       .from('profiles')
-      .update({ dni: dni.trim(), phone: normalizedPhone, city: city.trim() })
+      .update({
+        dni: dni.trim(),
+        phone: normalizedPhone,
+        city: city.trim(),
+        marketing_consent: marketingConsent,
+      })
       .eq('id', userId)
 
     if (updateError) {
@@ -120,6 +126,21 @@ export function CompletarPerfilForm({
           required
           placeholder="Santa Fe"
         />
+      </div>
+
+      <div className="rounded-lg border-2 border-brand bg-brand-light px-4 py-3">
+        <label htmlFor="marketingConsent" className="flex items-start gap-3 cursor-pointer">
+          <input
+            id="marketingConsent"
+            type="checkbox"
+            checked={marketingConsent}
+            onChange={(e) => setMarketingConsent(e.target.checked)}
+            className="mt-0.5 h-5 w-5 rounded accent-brand shrink-0"
+          />
+          <span className="text-sm font-medium text-foreground">
+            Sí, quiero recibir promociones y descuentos exclusivos de Isidoro
+          </span>
+        </label>
       </div>
 
       <button

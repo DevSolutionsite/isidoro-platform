@@ -11,6 +11,7 @@ export default async function AdminEmailPage() {
     .from('profiles')
     .select('id', { count: 'exact', head: true })
     .eq('role', 'cliente')
+    .eq('marketing_consent', true)
     .eq('email_opt_out', false)
 
   return (
@@ -19,7 +20,7 @@ export default async function AdminEmailPage() {
         Email promocional
       </h1>
       <p className="mt-0.5 text-sm" style={{ color: 'var(--text-muted)' }}>
-        Se envía a todos los clientes que no se dieron de baja.
+        Se envía a los clientes que aceptaron recibir promociones.
       </p>
 
       <div className="mt-6">

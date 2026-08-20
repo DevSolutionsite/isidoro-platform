@@ -4,23 +4,21 @@ import { useActionState, useEffect, useMemo, useRef, useState } from 'react'
 import { buildPromotionalEmailHtml } from '@/lib/email/promotionalTemplate'
 import { getSiteUrl } from '@/lib/constants'
 import { maybeConvertHeicToJpeg } from '@/lib/convertHeic'
-import { ClientPicker } from './ClientPicker'
-import type { EmailActionState, ClientSearchResult } from '@/lib/actions/admin-email'
+import type { EmailActionState } from '@/lib/actions/admin-email'
 
 interface EmailFormProps {
   action: (prevState: EmailActionState, formData: FormData) => Promise<EmailActionState>
   eligibleCount: number
 }
 
-type RecipientMode = 'all' | 'client' | 'email'
+type RecipientMode = 'all' | 'email'
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 const ACCEPTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp']
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 const MODE_LABELS: Record<RecipientMode, string> = {
-  all: 'Todos los clientes',
-  client: 'Cliente específico',
+  all: 'Todos los clientes que aceptaron',
   email: 'Email suelto',
 }
 
@@ -45,7 +43,6 @@ export function EmailForm({ action, eligibleCount }: EmailFormProps) {
   const [confirming, setConfirming] = useState(false)
   const [converting, setConverting] = useState(false)
   const [mode, setMode] = useState<RecipientMode>('all')
-  const [selectedClient, setSelectedClient] = useState<ClientSearchResult | null>(null)
   const [recipientEmail, setRecipientEmail] = useState('')
   const [fileInputKey, setFileInputKey] = useState(0)
   const [lastHandledResult, setLastHandledResult] = useState<EmailActionState['result']>(undefined)
@@ -106,7 +103,6 @@ export function EmailForm({ action, eligibleCount }: EmailFormProps) {
     setSubject('')
     setBody('')
     setMode('all')
-    setSelectedClient(null)
     setRecipientEmail('')
   }
 
@@ -121,24 +117,17 @@ export function EmailForm({ action, eligibleCount }: EmailFormProps) {
     setImageUrl(null)
     setFileError(null)
     setMode('all')
-    setSelectedClient(null)
     setRecipientEmail('')
     setFileInputKey((k) => k + 1)
   }
 
   const canSubmit =
-    mode === 'all'
-      ? eligibleCount > 0
-      : mode === 'client'
-        ? selectedClient !== null
-        : EMAIL_REGEX.test(recipientEmail.trim())
+    mode === 'all' ? eligibleCount > 0 : EMAIL_REGEX.test(recipientEmail.trim())
 
   const confirmLabel =
     mode === 'all'
       ? `¿Enviar este mail a ${eligibleCount} clientes?`
-      : mode === 'client'
-        ? `¿Enviar este mail a ${selectedClient?.full_name}?`
-        : `¿Enviar este mail a ${recipientEmail.trim()}?`
+      : `¿Enviar este mail a ${recipientEmail.trim()}?`
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -217,13 +206,6 @@ export function EmailForm({ action, eligibleCount }: EmailFormProps) {
               </button>
             ))}
           </div>
-
-          {mode === 'client' && (
-            <div className="mt-3">
-              <input type="hidden" name="recipient_client_id" value={selectedClient?.id ?? ''} />
-              <ClientPicker selected={selectedClient} onSelect={setSelectedClient} />
-            </div>
-          )}
 
           {mode === 'email' && (
             <input

@@ -27,6 +27,7 @@ export function RegisterForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [marketingConsent, setMarketingConsent] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
@@ -68,6 +69,7 @@ export function RegisterForm() {
           dni: dni.trim(),
           phone: normalizedPhone,
           city: city.trim(),
+          marketing_consent: marketingConsent,
         },
       },
     })
@@ -258,6 +260,21 @@ export function RegisterForm() {
                 placeholder="••••••••"
                 className={INPUT_CLS}
               />
+            </div>
+
+            <div className="rounded-lg border-2 border-brand bg-brand-light px-4 py-3">
+              <label htmlFor="marketingConsent" className="flex items-start gap-3 cursor-pointer">
+                <input
+                  id="marketingConsent"
+                  type="checkbox"
+                  checked={marketingConsent}
+                  onChange={(e) => setMarketingConsent(e.target.checked)}
+                  className="mt-0.5 h-5 w-5 rounded accent-brand shrink-0"
+                />
+                <span className="text-sm font-medium text-foreground">
+                  Sí, quiero recibir promociones y descuentos exclusivos de Isidoro
+                </span>
+              </label>
             </div>
 
             <button

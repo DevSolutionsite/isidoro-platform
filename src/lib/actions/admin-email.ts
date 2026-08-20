@@ -11,14 +11,6 @@ export interface EmailActionState {
   result?: { sent: number; failed: number; eligible: number }
 }
 
-export interface ClientSearchResult {
-  id: string
-  full_name: string
-  phone: string | null
-  email: string
-  email_opt_out: boolean
-}
-
 const EMAIL_IMAGES_BUCKET = 'email-images'
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 const ALLOWED_IMAGE_TYPES: Record<string, string> = {
@@ -26,10 +18,9 @@ const ALLOWED_IMAGE_TYPES: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/webp': 'webp',
 }
-const RESEND_FROM = 'Isidoro <onboarding@resend.dev>'
+const RESEND_FROM = 'Isidoro <promociones@isidororesto.com>'
 const BATCH_SIZE = 100
 const BATCH_DELAY_MS = 600
-const CLIENT_SEARCH_LIMIT = 8
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 function sleep(ms: number) {
@@ -81,44 +72,6 @@ async function requireAdmin() {
   return supabase
 }
 
-export async function searchClients(query: string): Promise<ClientSearchResult[]> {
-  const trimmed = query.trim()
-  if (!trimmed) return []
-
-  const supabase = await requireAdmin()
-  if (!supabase) return []
-
-  // Comas y paréntesis rompen la sintaxis del filtro .or() de PostgREST.
-  const safe = trimmed.replace(/[%,()]/g, ' ').trim()
-  if (!safe) return []
-
-  const { data: profiles, error } = await supabase
-    .from('profiles')
-    .select('id, full_name, phone, email_opt_out')
-    .eq('role', 'cliente')
-    .or(`full_name.ilike.%${safe}%,phone.ilike.%${safe}%`)
-    .limit(CLIENT_SEARCH_LIMIT)
-  if (error || !profiles || profiles.length === 0) return []
-
-  const admin = createAdminClient()
-  const results = await Promise.all(
-    profiles.map(async (p) => {
-      const { data } = await admin.auth.admin.getUserById(p.id)
-      const email = data.user?.email
-      if (!email) return null
-      return {
-        id: p.id,
-        full_name: p.full_name,
-        phone: p.phone,
-        email,
-        email_opt_out: p.email_opt_out,
-      }
-    })
-  )
-
-  return results.filter((r): r is ClientSearchResult => r !== null)
-}
-
 export async function sendPromotionalEmail(
   _prevState: EmailActionState,
   formData: FormData
@@ -149,38 +102,7 @@ export async function sendPromotionalEmail(
   }
 
   const siteUrl = getSiteUrl()
-  const recipientMode = ((formData.get('recipient_mode') as string) || 'all') as
-    | 'all'
-    | 'client'
-    | 'email'
-
-  if (recipientMode === 'client') {
-    const clientId = ((formData.get('recipient_client_id') as string) || '').trim()
-    if (!clientId) return { error: 'Elegí un cliente.' }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('unsubscribe_token, email_opt_out')
-      .eq('id', clientId)
-      .eq('role', 'cliente')
-      .single()
-    if (!profile) return { error: 'Cliente no encontrado.' }
-    if (profile.email_opt_out) return { error: 'Este cliente se dio de baja de estos mails.' }
-
-    const admin = createAdminClient()
-    const { data: userData } = await admin.auth.admin.getUserById(clientId)
-    const email = userData.user?.email
-    if (!email) return { error: 'No se pudo obtener el email del cliente.' }
-
-    return sendSingle({
-      subject,
-      body,
-      imageUrl,
-      to: email,
-      unsubscribeUrl: `${siteUrl}/unsubscribe?token=${profile.unsubscribe_token}`,
-      showUnsubscribe: true,
-    })
-  }
+  const recipientMode = ((formData.get('recipient_mode') as string) || 'all') as 'all' | 'email'
 
   if (recipientMode === 'email') {
     const rawEmail = ((formData.get('recipient_email') as string) || '').trim()
@@ -200,6 +122,7 @@ export async function sendPromotionalEmail(
     .from('profiles')
     .select('id, unsubscribe_token')
     .eq('role', 'cliente')
+    .eq('marketing_consent', true)
     .eq('email_opt_out', false)
   if (profilesError) return { error: profilesError.message }
 
