@@ -1,4 +1,3 @@
-import { formatARS } from '@/lib/utils'
 import type { PromoSlide } from '@/lib/types'
 
 interface PromoCarouselProps {
@@ -70,7 +69,7 @@ export function PromoCarousel({ slides }: PromoCarouselProps) {
             className="absolute inset-0"
             style={{
               background:
-                'linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.18) 55%, transparent 100%)',
+                'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.60) 45%, rgba(0,0,0,0.30) 100%)',
             }}
           />
 
@@ -96,22 +95,6 @@ export function PromoCarousel({ slides }: PromoCarouselProps) {
               >
                 {slide.description}
               </p>
-            )}
-
-            {slide.price != null && (
-              <div className="flex items-baseline gap-2 mt-2">
-                <span className="text-lg font-bold text-white">
-                  {formatARS(slide.price)}
-                </span>
-                {slide.originalPrice != null && (
-                  <span
-                    className="text-sm line-through"
-                    style={{ color: 'rgba(255,255,255,0.45)' }}
-                  >
-                    {formatARS(slide.originalPrice)}
-                  </span>
-                )}
-              </div>
             )}
           </div>
         </article>

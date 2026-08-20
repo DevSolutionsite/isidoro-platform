@@ -122,27 +122,18 @@ export default async function CartaPage() {
   }))
 
   const slides: PromoSlide[] = [
-    ...activeTimeOffers.map((offer): PromoSlide => {
-      const tops = offer.time_offer_products ?? []
-      const top = tops[0] ?? null
-      const product = top ? (products ?? []).find((p) => p.id === top.product_id) : null
-      return {
-        id: offer.id,
-        badge: 'AHORA',
-        title: offer.name,
-        description: offer.description,
-        price: top?.price_override ?? product?.price ?? null,
-        originalPrice: product && top?.price_override != null ? product.price : null,
-        image_url: offer.image_url,
-      }
-    }),
+    ...activeTimeOffers.map((offer): PromoSlide => ({
+      id: offer.id,
+      badge: 'AHORA',
+      title: offer.name,
+      description: offer.description,
+      image_url: offer.image_url,
+    })),
     ...activePromos.map((promo): PromoSlide => ({
       id: promo.id,
       badge: 'PROMO',
       title: promo.name,
       description: promo.description,
-      price: null,
-      originalPrice: null,
       image_url: promo.image_url,
     })),
   ]

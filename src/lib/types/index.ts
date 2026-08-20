@@ -33,8 +33,6 @@ export type PromoSlide = {
   badge: string
   title: string
   description: string | null
-  price: number | null
-  originalPrice: number | null
   image_url: string | null
 }
 
