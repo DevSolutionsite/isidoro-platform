@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useRef, useSyncExternalStore } from 'react'
 import type { InAppBrowserInfo } from '@/lib/inAppBrowser'
 import { inAppBannerDismissedStore } from '@/lib/inAppBannerDismissed'
 
@@ -32,7 +32,6 @@ export function InAppBrowserBanner({ initial: info }: InAppBrowserBannerProps) {
 }
 
 function BannerContent() {
-  const [copied, setCopied] = useState(false)
   const dismissed = useSyncExternalStore(
     inAppBannerDismissedStore.subscribe,
     inAppBannerDismissedStore.getSnapshot,
@@ -41,49 +40,34 @@ function BannerContent() {
 
   if (dismissed) return null
 
-  async function handleCopy() {
-    try {
-      await navigator.clipboard.writeText(window.location.href)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      // clipboard API puede no estar disponible (contexto no seguro,
-      // permisos denegados) — el usuario igual puede copiar el link
-      // manualmente desde la barra de direcciones del in-app browser.
-    }
-  }
-
   return (
     <div
       role="alert"
-      className="sticky top-0 z-50 flex items-center gap-3 border-t-2 border-brand bg-brand-light px-4 py-2.5 text-foreground"
+      className="sticky top-0 z-50 flex items-start gap-3 border-t-2 border-brand bg-brand-light px-4 py-3 text-foreground"
     >
       <span
         aria-hidden="true"
-        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand text-xs text-background"
+        className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand text-xs text-background"
       >
         ↗
       </span>
-      <p className="flex-1 text-[13px] font-medium leading-snug">
-        Se disfruta mejor en tu navegador.
-      </p>
-      <div className="flex shrink-0 items-center gap-1">
-        <button
-          type="button"
-          onClick={handleCopy}
-          className="whitespace-nowrap rounded-full bg-brand px-3.5 py-1.5 text-xs font-bold text-background transition-opacity hover:opacity-90"
-        >
-          {copied ? '¡Copiado!' : 'Copiar link'}
-        </button>
-        <button
-          type="button"
-          onClick={inAppBannerDismissedStore.dismiss}
-          aria-label="Cerrar aviso"
-          className="rounded-full p-1.5 text-text-muted transition-colors hover:text-foreground"
-        >
-          ✕
-        </button>
+      <div className="flex-1">
+        <p className="text-[13px] font-bold leading-snug">
+          Se disfruta mejor en tu navegador.
+        </p>
+        <p className="mt-0.5 text-[13px] font-medium leading-snug text-text-muted">
+          Tocá <span className="font-bold text-brand">⋯</span> y elegí
+          &quot;Abrir en el navegador&quot;.
+        </p>
       </div>
+      <button
+        type="button"
+        onClick={inAppBannerDismissedStore.dismiss}
+        aria-label="Cerrar aviso"
+        className="mt-0.5 shrink-0 rounded-full p-1.5 text-text-muted transition-colors hover:text-foreground"
+      >
+        ✕
+      </button>
     </div>
   )
 }
