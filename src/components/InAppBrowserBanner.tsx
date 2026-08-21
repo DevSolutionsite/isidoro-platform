@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type { InAppBrowserInfo } from '@/lib/inAppBrowser'
+import { inAppBannerDismissedStore } from '@/lib/inAppBannerDismissed'
 
 interface InAppBrowserBannerProps {
   initial: InAppBrowserInfo
@@ -45,6 +46,13 @@ export function InAppBrowserBanner({ initial: info }: InAppBrowserBannerProps) {
 
 function BannerContent({ app }: { app: InAppBrowserInfo['app'] }) {
   const [copied, setCopied] = useState(false)
+  const dismissed = useSyncExternalStore(
+    inAppBannerDismissedStore.subscribe,
+    inAppBannerDismissedStore.getSnapshot,
+    inAppBannerDismissedStore.getServerSnapshot,
+  )
+
+  if (dismissed) return null
 
   async function handleCopy() {
     try {
@@ -73,13 +81,23 @@ function BannerContent({ app }: { app: InAppBrowserInfo['app'] }) {
         Estás viendo esta página dentro de {label}. Para usar el login con
         Google necesitás abrirla en tu navegador: {instruction}.
       </p>
-      <button
-        type="button"
-        onClick={handleCopy}
-        className="shrink-0 self-start rounded-lg border border-border bg-surface-alt px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-brand hover:text-background sm:self-auto"
-      >
-        {copied ? '¡Copiado!' : 'Copiar link'}
-      </button>
+      <div className="flex shrink-0 items-center gap-2 self-start sm:self-auto">
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="rounded-lg border border-border bg-surface-alt px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-brand hover:text-background"
+        >
+          {copied ? '¡Copiado!' : 'Copiar link'}
+        </button>
+        <button
+          type="button"
+          onClick={inAppBannerDismissedStore.dismiss}
+          aria-label="Cerrar aviso"
+          className="rounded-lg p-1.5 text-text-muted transition-colors hover:bg-surface-alt hover:text-foreground"
+        >
+          ✕
+        </button>
+      </div>
     </div>
   )
 }
