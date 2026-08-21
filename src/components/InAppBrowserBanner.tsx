@@ -8,19 +8,6 @@ interface InAppBrowserBannerProps {
   initial: InAppBrowserInfo
 }
 
-const APP_LABEL: Record<NonNullable<InAppBrowserInfo['app']>, string> = {
-  instagram: 'Instagram',
-  facebook: 'Facebook',
-  tiktok: 'TikTok',
-  line: 'Line',
-  wechat: 'WeChat',
-}
-
-// Instagram y Facebook muestran el menú "⋯" arriba a la derecha con esa
-// wording exacta en español. El resto de las apps varía la posición y el
-// texto entre versiones, así que les damos una instrucción genérica.
-const SPECIFIC_INSTRUCTION = new Set(['instagram', 'facebook'])
-
 export function InAppBrowserBanner({ initial: info }: InAppBrowserBannerProps) {
   const redirectAttempted = useRef(false)
 
@@ -41,10 +28,10 @@ export function InAppBrowserBanner({ initial: info }: InAppBrowserBannerProps) {
 
   if (!info.isInApp) return null
 
-  return <BannerContent app={info.app} />
+  return <BannerContent />
 }
 
-function BannerContent({ app }: { app: InAppBrowserInfo['app'] }) {
+function BannerContent() {
   const [copied, setCopied] = useState(false)
   const dismissed = useSyncExternalStore(
     inAppBannerDismissedStore.subscribe,
@@ -66,26 +53,25 @@ function BannerContent({ app }: { app: InAppBrowserInfo['app'] }) {
     }
   }
 
-  const label = app ? APP_LABEL[app] : 'esta app'
-  const instruction =
-    app && SPECIFIC_INSTRUCTION.has(app)
-      ? 'tocá los ⋯ (tres puntos) arriba a la derecha y elegí "Abrir en el navegador"'
-      : 'buscá la opción "Abrir en el navegador" en el menú de la app'
-
   return (
     <div
       role="alert"
-      className="sticky top-0 z-50 flex flex-col gap-2 border-b border-border bg-surface px-4 py-3 text-sm text-foreground sm:flex-row sm:items-center sm:justify-between"
+      className="sticky top-0 z-50 flex items-center gap-3 border-t-2 border-brand bg-brand-light px-4 py-2.5 text-foreground"
     >
-      <p className="leading-snug">
-        Estás viendo esta página dentro de {label}. Para usar el login con
-        Google necesitás abrirla en tu navegador: {instruction}.
+      <span
+        aria-hidden="true"
+        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand text-xs text-background"
+      >
+        ↗
+      </span>
+      <p className="flex-1 text-[13px] font-medium leading-snug">
+        Se disfruta mejor en tu navegador.
       </p>
-      <div className="flex shrink-0 items-center gap-2 self-start sm:self-auto">
+      <div className="flex shrink-0 items-center gap-1">
         <button
           type="button"
           onClick={handleCopy}
-          className="rounded-lg border border-border bg-surface-alt px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-brand hover:text-background"
+          className="whitespace-nowrap rounded-full bg-brand px-3.5 py-1.5 text-xs font-bold text-background transition-opacity hover:opacity-90"
         >
           {copied ? '¡Copiado!' : 'Copiar link'}
         </button>
@@ -93,7 +79,7 @@ function BannerContent({ app }: { app: InAppBrowserInfo['app'] }) {
           type="button"
           onClick={inAppBannerDismissedStore.dismiss}
           aria-label="Cerrar aviso"
-          className="rounded-lg p-1.5 text-text-muted transition-colors hover:bg-surface-alt hover:text-foreground"
+          className="rounded-full p-1.5 text-text-muted transition-colors hover:text-foreground"
         >
           ✕
         </button>
