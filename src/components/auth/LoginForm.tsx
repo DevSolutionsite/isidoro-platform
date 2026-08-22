@@ -23,9 +23,10 @@ function mapAuthError(message: string): string {
 
 interface LoginFormProps {
   oauthError?: boolean
+  resetSuccess?: boolean
 }
 
-export function LoginForm({ oauthError }: LoginFormProps) {
+export function LoginForm({ oauthError, resetSuccess }: LoginFormProps) {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -72,6 +73,12 @@ export function LoginForm({ oauthError }: LoginFormProps) {
         <div className="w-full max-w-sm">
           <h2 className="mb-6 text-xl font-semibold text-foreground">Iniciar sesión</h2>
 
+          {resetSuccess && !error && (
+            <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+              Contraseña actualizada. Iniciá sesión con tu nueva contraseña.
+            </div>
+          )}
+
           {error && (
             <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               {error}
@@ -96,9 +103,17 @@ export function LoginForm({ oauthError }: LoginFormProps) {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="password" className="text-sm font-medium text-foreground">
-                Contraseña
-              </label>
+              <div className="flex items-center justify-between">
+                <label htmlFor="password" className="text-sm font-medium text-foreground">
+                  Contraseña
+                </label>
+                <Link
+                  href="/forgot-password"
+                  className="text-xs font-medium text-brand hover:text-brand-dark"
+                >
+                  ¿Olvidaste tu contraseña?
+                </Link>
+              </div>
               <input
                 id="password"
                 type="password"

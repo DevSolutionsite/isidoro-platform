@@ -10,12 +10,17 @@ const ROLE_ROUTES: Record<string, string> = {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
+  const type = searchParams.get('type')
 
   if (code) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error) {
+      if (type === 'recovery') {
+        return NextResponse.redirect(new URL('/reset-password', request.url))
+      }
+
       const {
         data: { user },
       } = await supabase.auth.getUser()

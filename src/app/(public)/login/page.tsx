@@ -16,7 +16,7 @@ const ROLE_ROUTES: Record<string, string> = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; reset?: string }>
 }) {
   const supabase = await createClient()
   const {
@@ -32,6 +32,6 @@ export default async function LoginPage({
     redirect(ROLE_ROUTES[profile?.role ?? ''] ?? '/carta')
   }
 
-  const { error } = await searchParams
-  return <LoginForm oauthError={error === 'oauth'} />
+  const { error, reset } = await searchParams
+  return <LoginForm oauthError={error === 'oauth'} resetSuccess={reset === 'success'} />
 }
