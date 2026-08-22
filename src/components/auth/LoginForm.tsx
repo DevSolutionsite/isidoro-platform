@@ -23,15 +23,20 @@ function mapAuthError(message: string): string {
 
 interface LoginFormProps {
   oauthError?: boolean
+  recoveryError?: boolean
   resetSuccess?: boolean
 }
 
-export function LoginForm({ oauthError, resetSuccess }: LoginFormProps) {
+export function LoginForm({ oauthError, recoveryError, resetSuccess }: LoginFormProps) {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(
-    oauthError ? 'Error al iniciar sesión con Google. Intentá de nuevo.' : null
+    oauthError
+      ? 'Error al iniciar sesión con Google. Intentá de nuevo.'
+      : recoveryError
+        ? 'El link de recuperación expiró o ya fue usado. Solicitá uno nuevo.'
+        : null
   )
   const [loading, setLoading] = useState(false)
 

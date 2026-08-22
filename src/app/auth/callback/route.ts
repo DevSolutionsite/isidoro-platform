@@ -12,9 +12,21 @@ export async function GET(request: Request) {
   const code = searchParams.get('code')
   const type = searchParams.get('type')
 
+  // TEMP DEBUG — remover una vez confirmada la causa raíz del bug de recovery
+  console.log('[auth/callback] TEMP DEBUG full url:', request.url)
+
   if (code) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
+
+    if (error) {
+      console.error('[auth/callback] TEMP DEBUG exchangeCodeForSession error:', {
+        message: error.message,
+        status: error.status,
+        code: error.code,
+        type,
+      })
+    }
 
     if (!error) {
       if (type === 'recovery') {
@@ -35,8 +47,13 @@ export async function GET(request: Request) {
         const dest = ROLE_ROUTES[profile?.role ?? ''] ?? '/perfil'
         return NextResponse.redirect(new URL(dest, request.url))
       }
+
+      console.error('[auth/callback] TEMP DEBUG exchange ok but no user. type:', type)
     }
+  } else {
+    console.error('[auth/callback] TEMP DEBUG no code param in url. type:', type)
   }
 
-  return NextResponse.redirect(new URL('/login?error=oauth', request.url))
+  const errorParam = type === 'recovery' ? 'recovery' : 'oauth'
+  return NextResponse.redirect(new URL(`/login?error=${errorParam}`, request.url))
 }

@@ -33,5 +33,11 @@ export default async function LoginPage({
   }
 
   const { error, reset } = await searchParams
-  return <LoginForm oauthError={error === 'oauth'} resetSuccess={reset === 'success'} />
+  return (
+    <LoginForm
+      oauthError={error === 'oauth'}
+      recoveryError={error === 'recovery'}
+      resetSuccess={reset === 'success'}
+    />
+  )
 }
