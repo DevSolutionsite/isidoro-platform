@@ -10,33 +10,19 @@ const ROLE_ROUTES: Record<string, string> = {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
-  const type = searchParams.get('type')
-
-  // TEMP DEBUG — remover una vez confirmada la causa raíz del bug de recovery
-  console.log('[auth/callback] TEMP DEBUG full url:', request.url)
+  let redirectType: string | null = null
 
   if (code) {
     const supabase = await createClient()
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
-
-    if (error) {
-      console.error('[auth/callback] TEMP DEBUG exchangeCodeForSession error:', {
-        message: error.message,
-        status: error.status,
-        code: error.code,
-        type,
-      })
-    }
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+    redirectType = (data as { redirectType?: string | null }).redirectType ?? null
 
     if (!error) {
-      if (type === 'recovery') {
+      if (redirectType === 'recovery') {
         return NextResponse.redirect(new URL('/reset-password', request.url))
       }
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
+      const { user } = data
       if (user) {
         const { data: profile } = await supabase
           .from('profiles')
@@ -47,13 +33,9 @@ export async function GET(request: Request) {
         const dest = ROLE_ROUTES[profile?.role ?? ''] ?? '/perfil'
         return NextResponse.redirect(new URL(dest, request.url))
       }
-
-      console.error('[auth/callback] TEMP DEBUG exchange ok but no user. type:', type)
     }
-  } else {
-    console.error('[auth/callback] TEMP DEBUG no code param in url. type:', type)
   }
 
-  const errorParam = type === 'recovery' ? 'recovery' : 'oauth'
+  const errorParam = redirectType === 'recovery' ? 'recovery' : 'oauth'
   return NextResponse.redirect(new URL(`/login?error=${errorParam}`, request.url))
 }
