@@ -4,12 +4,14 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { PASSWORD_REGEX } from '@/lib/validation'
 
 const INPUT_CLS =
   'w-full rounded-lg border border-border bg-surface px-4 py-2.5 text-sm text-foreground placeholder:text-text-muted focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand transition-colors'
 
 function mapAuthError(message: string): string {
-  if (message.includes('Password should be')) return 'La contraseña debe tener al menos 6 caracteres'
+  if (message.includes('Password should contain') || message.includes('Password should be'))
+    return 'La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número'
   if (message.includes('same as the old password'))
     return 'La nueva contraseña debe ser distinta a la anterior'
   return 'Ocurrió un error. Intentá de nuevo.'
@@ -25,6 +27,11 @@ export function ResetPasswordForm() {
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError(null)
+
+    if (!PASSWORD_REGEX.test(password)) {
+      setError('La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número')
+      return
+    }
 
     if (password !== confirmPassword) {
       setError('Las contraseñas no coinciden')
@@ -74,10 +81,10 @@ export function ResetPasswordForm() {
                 type="password"
                 autoComplete="new-password"
                 required
-                minLength={6}
+                minLength={8}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Mínimo 6 caracteres"
+                placeholder="Mínimo 8 caracteres, con mayúscula, minúscula y número"
                 className={INPUT_CLS}
               />
             </div>
